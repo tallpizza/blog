@@ -1,0 +1,95 @@
+---
+title: 'TOTEM 40key 키보드 제작기'
+date: '2025-03-03'
+lastmod: '2025-03-03'
+tags: ['keyboards', 'totem']
+draft: true
+summary: 'GEIGEIGEIST TOTEM을 변형해서 40key 키보드를 만들었습니다.'
+images: ['/static/images/totem-40key/RESULT.png']
+canonicalUrl: 'https://tallpizza.com/blog/posts/totem-40key/'
+---
+
+![](/static/images/totem-40key/RESULT.png)
+
+# 이유
+
+[GEIGEIGEIST TOTEM](https://github.com/GEIGEIGEIST/TOTEM) 키보드를 쓰다가 HomeRow mode가 결국엔 적응이 안됬다.  
+(타이핑을 빠르게하면 modifier키가 눌려 오류가 많이 생겼다.)
+
+그러던중, totem에서 사용하는 Seeed XIAO 가 총 20개에 input을 받을수 있다는걸 알게되어서, 40키 키보드를 만들기로 했다.
+
+<br />
+<br />
+
+# PCB
+
+PCB는 [GEIGEIGEIST TOTEM](https://github.com/GEIGEIGEIST/TOTEM/tree/main/PCB)을 수정해서 만들었다.
+
+## 원본
+
+![](/static/images/totem-40key/pcb-original.png)
+
+## 수정
+
+![](/static/images/totem-40key/PCB.png)
+
+새끼손가락 누르는 부분 바로 위에 키를 하나 추가해줬다. 원본은 배선을 정말깔끔하게했지만. 기판을 잘 그리지 못해 일단 연결하는걸 목표로 했다.
+
+로고있는 부분에 다이오드를 넣어주었는데, 나중에 케이스를 만들고 보니 여기에 케이스와 간섭이 생겼다...
+
+<br />
+<br />
+
+# 케이스
+
+케이스도 GEIGEIGEIST 깃헙에 있는 step 파일을 수정해서 만들었다.
+
+## 원본
+
+![](/static/images/totem-40key/case-original.png)
+
+## 수정
+
+![](/static/images/totem-40key/case.png)
+
+### 전원스위치
+
+원본 케이스에서 불편했던게, 전원스위치가 손톱이 충분히 길지 않으면 키고끄기가 어려워서 좀더 넓게 만들었지만 여전히 불편하다..
+
+### 배터리
+
+배터리 용량이 아쉬웠어서, 좀더 크게만들고 602025-220mah 크기의 배터리를 사용했다.
+
+### 간섭
+
+pcb 에서 다이오드 부분 간섭이 있다. 왼쪽케이스는 간섭이 없지만 오른쪽 케이스는 있어서, 칼로 조금 다듬어줘야 들어간다..
+
+<br />
+<br />
+
+# 소프트웨어
+
+[깃헙](https://github.com/tallpizza/zmk-config-totem/tree/40keys)에 올려두었다.
+기존 zmk config에서 조금 수정해서 사용했는데 [nickcoutsos.github.io/keymap-editor](https://nickcoutsos.github.io/keymap-editor/)으로 리포지토리 연결해서 사용하고 있었는데,
+배열이 기존 38키 그대로 보여서 2칸씩 밀려보이는 바람에 사용을 못하고있다.
+해결 방법 아시는 분 알려주시면 감사합니다..
+
+<br />
+<br />
+
+# 받침대
+
+알리에서 운동하면서 핸드폰 거치하라고 나온 제품이 있다.
+키보드 밑에 맥세이프 링 붙여서 사용하면, 이보다 편할수 없다. [링크](https://www.aliexpress.com/item/3256806488427460.html)
+
+<div className="grid grid-cols-2 gap-2">
+  <div>![](/static/images/totem-40key/FOOT.png)</div>
+  <div>![](/static/images/totem-40key/SIDE.png)</div>
+</div>
+
+<br />
+<br />
+
+# 자료
+
+[깃헙](https://github.com/tallpizza/totem-40key)에 모든 자료들은 올려놓았다. 수정필요한 부분은 댓글로 달아주시면 감사합니다.
