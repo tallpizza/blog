@@ -38,7 +38,7 @@ export function TypedIntroduceWrapper() {
   return (
     <div className="min-h-42 py-4">
       <span
-        className="text-xl leading-7 text-gray-500 dark:text-gray-300 emoji"
+        className="emoji text-xl leading-7 text-gray-500 dark:text-gray-300"
         ref={typedRef}
       ></span>
     </div>
