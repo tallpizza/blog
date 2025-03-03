@@ -18,9 +18,9 @@ export function TypedIntroduceWrapper() {
   useEffect(() => {
     const options = {
       strings: [
-        'Hello, Here is my personal blog! 📝',
-        'I am interested in LLMs and how to use them for efficiency 🔗',
-        "I'm interested in developing things that can be seen and touched. 🔧✨",
+        'Hello, Here is my personal blog! &#x1F4DD;',
+        "I'm interested in making functional objects that enhance daily life. &#x1F527;	&#x2728;",
+        'Professional builder with occasional usefulness. &#x1F525;',
       ],
       typeSpeed: 50,
       backSpeed: 30,
@@ -37,7 +37,10 @@ export function TypedIntroduceWrapper() {
 
   return (
     <div className="min-h-42 py-4">
-      <span className="text-xl leading-7 text-gray-500 dark:text-gray-300" ref={typedRef}></span>
+      <span
+        className="text-xl leading-7 text-gray-500 dark:text-gray-300 emoji"
+        ref={typedRef}
+      ></span>
     </div>
   )
 }
