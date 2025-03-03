@@ -5,7 +5,7 @@ import Image from '../atoms/Image'
 const PostAuthorContainer = ({ author }: { author: Authors }) => {
   return (
     <div className="flex items-center">
-      <div className="relative h-10 w-10 rounded-full bg-slate-600">
+      <div className="relative h-10 w-10 rounded-full bg-slate-300 dark:bg-slate-600">
         <Image
           className="static h-10 w-10 rounded-full"
           sizes="auto"

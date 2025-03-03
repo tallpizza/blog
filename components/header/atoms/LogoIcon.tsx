@@ -5,14 +5,14 @@ const LogoIcon = () => {
     <div className="mr-2">
       <Image
         className="hidden dark:block"
-        src={'/static/images/logo.png'}
+        src={'/static/images/logo-trans-dark.png'}
         alt="Logo"
         width={40}
         height={40}
       />
       <Image
         className="dark:hidden"
-        src={'/static/image/logo.png'}
+        src={'/static/images/logo-trans.png'}
         alt="Logo"
         width={40}
         height={40}
