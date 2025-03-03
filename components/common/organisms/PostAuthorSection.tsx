@@ -9,7 +9,7 @@ interface PostAuthorSectionProps {
 
 const PostAuthorSection = ({ author, date }: PostAuthorSectionProps) => {
   return (
-    <div className="w-full flex items-center justify-between mt-4 my-2 ">
+    <div className="my-2 mt-4 flex w-full items-center justify-between">
       <PostAuthorContainer author={author} />
 
       <PostDateContainer date={date} />

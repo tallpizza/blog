@@ -15,16 +15,16 @@ interface MainPostCardProps {
 const MainPostCard = ({ post, author }: MainPostCardProps) => {
   const { slug, date, title, summary, tags, images } = post
   return (
-    <div className="container flex flex-col items-center justify-center p-4 shadow-md rounded-xl bg-slate-200 dark:bg-slate-700">
+    <div className="container flex flex-col items-center justify-center rounded-xl bg-slate-200 p-4 shadow-md dark:bg-slate-700">
       <PostThumbnailWrapper
         title={title}
         slug={slug}
         image={Array.isArray(images) ? images[0] : '/static/images/banner.jpeg'}
-        className="mb-4 bg-white shadow-md rounded-xl h-72"
+        className="mb-4 h-72 rounded-xl bg-white shadow-md"
         imageObjectFit="contain"
       />
 
-      <div className="flex flex-col items-start justify-start w-full mt-2 lg:mt-0 h-60 md:h-72 min-h-max">
+      <div className="mt-2 flex h-60 min-h-max w-full flex-col items-start justify-start md:h-72 lg:mt-0">
         <div className="flex-1">
           <NavigationButton
             href={`/posts/${slug}`}
@@ -37,7 +37,7 @@ const MainPostCard = ({ post, author }: MainPostCardProps) => {
 
           <PostSummaryTextElement summary={summary ?? ''} />
         </div>
-        <div className="flex flex-wrap mt-8">
+        <div className="mt-8 flex flex-wrap">
           {tags.map((tag) => (
             <Tag className="my-1 mr-2" key={tag} text={tag} />
           ))}

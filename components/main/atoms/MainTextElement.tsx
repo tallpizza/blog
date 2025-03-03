@@ -10,6 +10,6 @@ export const MainInformationText = ({
 
 export const MainPostTitleTextElement = ({ title }: { title: string }) => {
   return (
-    <p className="block text-sm font-semibold text-gray-800 dark:text-white md:text-xl">{title}</p>
+    <p className="block text-sm font-semibold text-gray-800 md:text-xl dark:text-white">{title}</p>
   )
 }

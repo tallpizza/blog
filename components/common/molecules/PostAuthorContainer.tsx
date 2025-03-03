@@ -4,10 +4,10 @@ import Image from '../atoms/Image'
 
 const PostAuthorContainer = ({ author }: { author: Authors }) => {
   return (
-    <div className="flex items-center ">
-      <div className="relative w-10 h-10 rounded-full bg-slate-600">
+    <div className="flex items-center">
+      <div className="relative h-10 w-10 rounded-full bg-slate-600">
         <Image
-          className="w-10 h-10 rounded-full static"
+          className="static h-10 w-10 rounded-full"
           sizes="auto"
           src={author.avatar as string}
           alt={author.name}
@@ -15,7 +15,7 @@ const PostAuthorContainer = ({ author }: { author: Authors }) => {
           style={{ objectFit: 'cover' }}
         />
       </div>
-      <dl className="ml-2 whitespace-nowrap text-sm font-medium leading-5">
+      <dl className="ml-2 text-sm leading-5 font-medium whitespace-nowrap">
         <dt className="sr-only">Name</dt>
         <dd className="text-gray-900 dark:text-gray-100">{author.name}</dd>
         <dt className="sr-only">Github</dt>

@@ -19,8 +19,8 @@ const Header = () => {
           <div className="flex items-center justify-between">
             <LogoIcon />
             {typeof siteMetadata.headerTitle === 'string' ? (
-              <div className="hidden sm:flex flex-col">
-                <div className="hidden h-6 text-xl font-semibold sm:block ">
+              <div className="hidden flex-col sm:flex">
+                <div className="hidden h-6 text-xl font-semibold sm:block">
                   {siteMetadata.headerTitle}
                 </div>
                 <Hits />
@@ -31,11 +31,11 @@ const Header = () => {
           </div>
         </Link>
       </div>
-      <div className="flex items-center leading-5 space-x-4 sm:space-x-6">
+      <div className="flex items-center space-x-4 leading-5 sm:space-x-6">
         {headerNavLinks
           .filter((link) => link.href !== '/')
           .map((link) => (
-            <div key={link.title} className="hidden sm:flex font-medium items-start">
+            <div key={link.title} className="hidden items-start font-medium sm:flex">
               <NavigationButton href={link.href} title={link.title} color="slate">
                 <p className="font-medium text-gray-900 dark:text-gray-100">{link.title}</p>
               </NavigationButton>

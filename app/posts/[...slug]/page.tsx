@@ -20,13 +20,14 @@ const layouts = {
   PostBanner,
 }
 
-export async function generateMetadata({
-  params,
-}: {
-  params: { slug: string[] }
-}): Promise<Metadata | undefined> {
-  const slug = decodeURI(params.slug.join('/'))
-  const post = allBlogs.find((p) => p.slug === slug)
+type Props = {
+  params: Promise<{ slug: string[] }>
+}
+
+export async function generateMetadata({ params }: Props): Promise<Metadata | undefined> {
+  const slug = (await params).slug.join('/')
+  const decodedSlug = decodeURI(slug)
+  const post = allBlogs.find((p) => p.slug === decodedSlug)
   const authorList = post?.authors || ['default']
   const authorDetails = authorList.map((author) => {
     const authorResults = allAuthors.find((p) => p.slug === author)
@@ -72,18 +73,21 @@ export async function generateMetadata({
     },
   }
 }
-export const generateStaticParams = async () => {
-  const paths = allBlogs.map((p) => ({ slug: p.slug.split('/') }))
 
+export async function generateStaticParams() {
+  const paths = allBlogs.map((p) => ({
+    slug: p.slug.split('/'),
+  }))
   return paths
 }
 
-export default async function Page({ params }: { params: { slug: string[]; locale: string } }) {
-  const slug = decodeURI(params.slug.join('/'))
+export default async function Page({ params }: Props) {
+  const slug = (await params).slug.join('/')
+  const decodedSlug = decodeURI(slug)
 
   // Filter out drafts in production
   const sortedCoreContents = allCoreContent(sortPosts(allBlogs))
-  const postIndex = sortedCoreContents.findIndex((p) => p.slug === slug)
+  const postIndex = sortedCoreContents.findIndex((p) => p.slug === decodedSlug)
   if (postIndex === -1) {
     return (
       <div className="mt-24 text-center">
@@ -99,7 +103,7 @@ export default async function Page({ params }: { params: { slug: string[]; local
 
   const prev = sortedCoreContents[postIndex + 1]
   const next = sortedCoreContents[postIndex - 1]
-  const post = allBlogs.find((p) => p.slug === slug) as Blog
+  const post = allBlogs.find((p) => p.slug === decodedSlug) as Blog
   const authorList = post?.authors || ['default']
   const authorDetails = authorList.map((author) => {
     const authorResults = allAuthors.find((p) => p.slug === author)

@@ -22,11 +22,11 @@ export default function PostContainer({
           title={title}
           slug={slug}
           image={Array.isArray(images) ? images[0] : '/static/images/banner.jpeg'}
-          className="lg:mx-6 lg:w-1/2 rounded-xl h-72 border-gray-300/40 border-[0.5px]"
+          className="h-72 rounded-xl border-[0.5px] border-gray-300/40 lg:mx-6 lg:w-1/2"
           imageObjectFit="contain"
         />
 
-        <div className="py-1 mt-2 lg:w-1/2 lg:mt-0 lg:h-72 flex flex-col items-start justify-start min-h-full">
+        <div className="mt-2 flex min-h-full flex-col items-start justify-start py-1 lg:mt-0 lg:h-72 lg:w-1/2">
           <div className="flex-1">
             <NavigationButton
               href={`/posts/${slug}`}
@@ -49,7 +49,7 @@ export default function PostContainer({
           </div>
           <div className="mt-4 flex flex-wrap">
             {tags.map((tag) => (
-              <Tag className="mr-2 my-1" key={tag} text={tag} />
+              <Tag className="my-1 mr-2" key={tag} text={tag} />
             ))}
           </div>
           <PostAuthorSection author={author} date={date} />

@@ -11,10 +11,10 @@ export const generateStaticParams = async () => {
   return paths
 }
 
-export default function Page({ params }: { params: { page: string } }) {
+export default async function Page({ params }: { params: Promise<{ page: string }> }) {
   const author = allAuthors.find((p) => p.slug === 'default') as Authors
   const posts = allCoreContent(sortPosts(allBlogs))
-  const pageNumber = parseInt(params.page as string)
+  const pageNumber = parseInt((await params).page as string)
   const initialDisplayPosts = posts.slice(
     POSTS_PER_PAGE * (pageNumber - 1),
     POSTS_PER_PAGE * pageNumber

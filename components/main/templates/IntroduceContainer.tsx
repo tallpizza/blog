@@ -6,8 +6,8 @@ const INTERESTED_TECH_TAGS = ['cosmos-network', 'Cryptography']
 
 const IntroduceContainer = () => {
   return (
-    <div className="flex p-0 md:p-4 w-auto items-center justify-between h-auto">
-      <div className="flex flex-col items-start justify-start h-auto flex-1">
+    <div className="flex h-auto w-auto items-center justify-between p-0 md:p-4">
+      <div className="flex h-auto flex-1 flex-col items-start justify-start">
         <GreetingTextWrapper />
         <IntroduceTextWrapper />
         <TypedIntroduceWrapper />

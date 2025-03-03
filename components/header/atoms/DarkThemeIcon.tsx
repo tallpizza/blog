@@ -4,7 +4,7 @@ const DarkThemeIcon = () => {
       xmlns="http://www.w3.org/2000/svg"
       viewBox="0 0 20 20"
       fill="currentColor"
-      className="text-gray-900 dark:text-gray-100 h-6 w-6 hidden dark:inline-block"
+      className="hidden h-6 w-6 text-gray-900 dark:inline-block dark:text-gray-100"
     >
       <path
         fillRule="evenodd"

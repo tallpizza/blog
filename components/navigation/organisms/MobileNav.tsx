@@ -29,12 +29,12 @@ const MobileNav = () => {
       </button>
       <div
         className={ctm(
-          `fixed right-0 top-0 z-10 h-full w-2/3 transform opacity-90 dark:opacity-[0.90] bg-white duration-300 ease-in-out dark:bg-gray-800`,
+          `fixed top-0 right-0 z-10 h-full w-2/3 transform bg-white opacity-90 duration-300 ease-in-out dark:bg-gray-800 dark:opacity-[0.90]`,
           navShow ? 'translate-x-0' : 'translate-x-full'
         )}
       >
         <div className="flex justify-end">
-          <button className="mr-8 mt-11 h-8 w-8" aria-label="Toggle Menu" onClick={onToggleNav}>
+          <button className="mt-11 mr-8 h-8 w-8" aria-label="Toggle Menu" onClick={onToggleNav}>
             <CloseIcon />
           </button>
         </div>

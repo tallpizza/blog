@@ -11,7 +11,7 @@ export default function AboutContent() {
     <div>
       <div className="flex items-center justify-end">
         <select
-          className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-auto p-2 pr-8 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500 text-center"
+          className="block w-auto rounded-lg border border-gray-300 bg-gray-50 p-2 pr-8 text-center text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 dark:focus:border-blue-500 dark:focus:ring-blue-500"
           id="language"
           onChange={handleLanguageChange}
           defaultValue={'ko'} // 현재 선택된 언어를 표시

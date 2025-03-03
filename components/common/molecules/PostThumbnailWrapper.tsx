@@ -18,14 +18,14 @@ const PostThumbnailWrapper = ({
   imageObjectFit,
 }: PostThumbnailWrapper) => {
   return (
-    <div className={ctm('relative overflow-hidden bg-clip-border w-full ', className)}>
+    <div className={ctm('relative w-full overflow-hidden bg-clip-border', className)}>
       <Link
-        className="relative block w-auto overflow-hidden bg-white bg-clip-border rounded-xl h-72"
+        className="relative block h-72 w-auto overflow-hidden rounded-xl bg-white bg-clip-border"
         href={`/posts/${slug}`}
         aria-label={`Read "${title}"`}
       >
         <Image
-          className="absolute inset-0 object-cover w-full h-full"
+          className="absolute inset-0 h-full w-full object-cover"
           sizes="auto"
           src={image}
           alt={slug}
