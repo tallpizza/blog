@@ -1,4 +1,7 @@
 {
+  "lsp": 1,
+  "mcp": 1,
+  "graph-rag": 1,
   "keyboards": 2,
   "totem": 2
 }

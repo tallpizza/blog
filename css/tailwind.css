@@ -88,7 +88,12 @@
         color: var(--color-primary-400);
       }
     }
-    & :where(h1, h2) {
+    & h1 {
+      font-weight: 700;
+      letter-spacing: var(--tracking-tight);
+      margin-top: 5rem;
+    }
+    & h2 {
       font-weight: 700;
       letter-spacing: var(--tracking-tight);
     }
@@ -110,7 +115,10 @@
         color: var(--color-primary-400);
       }
     }
-    & :where(h1, h2, h3, h4, h5, h6) {
+    & h1 {
+      color: var(--color-primary-300);
+    }
+    & :where(h2, h3, h4, h5, h6) {
       color: var(--color-gray-100);
     }
   }
