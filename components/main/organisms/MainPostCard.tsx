@@ -20,7 +20,7 @@ const MainPostCard = ({ post, author }: MainPostCardProps) => {
         title={title}
         slug={slug}
         image={Array.isArray(images) ? images[0] : '/static/images/banner.jpeg'}
-        className="mb-4 h-72 rounded-xl bg-white shadow-md"
+        className="mb-4 h-72 rounded-xl bg-slate-100/60 shadow-md dark:bg-slate-600"
         imageObjectFit="contain"
       />
 
