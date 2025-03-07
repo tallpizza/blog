@@ -1,0 +1,38 @@
+---
+title: '코드베이스 탐색기 만들기'
+date: '2025-03-07'
+lastmod: '2025-03-07'
+tags: ['lsp', 'mcp', 'graph-rag']
+draft: true
+summary: 'LSP 와 MCP를 활용해 코드베이스 탐색기 만들기'
+images: ['/static/images/thumbnail/mcp.webp']
+canonicalUrl: 'https://tallpizza.com/blog/posts/lsp-mcp/'
+---
+
+![](/static/images/thumbnail/mcp.webp)
+
+# 목표
+
+Cursor로 프론트 개발을 할 때 백앤드 코드를 알아서 찾아오도록 MCP서버를 만들고 연결하기
+
+# 단계
+
+### 1. 간단한 MCP 서버 만들어보기
+
+아직 MCP 가 어떤건지만 알고 한 번도 사용해 본 적은 없다.  
+Claude 데스크톱 버전에서 github 연결하는 mcp예제 따라서 만들어보자
+
+### 2. LSP를 사용해서 코드베이스 postgres 에 저장하기
+
+LSP도 어떤건지만 알고, 따로 사용해 본 적은 없다.
+
+- lsp로 코드를 얼마나 세분화해서 나눌수있는지 확인이 필요하다.
+  - 함수,클래스, const, let, var 등등
+- 코드들을 Graph RAG 처럼 사용하려하는데, 해당 코드와 관련있는 다른 부분을 찾아오는 방법을 찾아야한다
+  - A함수 안에 참조하고있는 다른 함수나 상수를 연결시켜 저장하는것이 목표
+
+### 3. MCP서버에서 사용가능한 함수들 만들기
+
+- 자연어 입력으로 가장 적절한 코드를 가져오는지 확인해야한다.
+
+### 4. Cursor에서 코드베이스 탐색기 사용하기
