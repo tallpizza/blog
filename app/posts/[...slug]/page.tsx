@@ -75,10 +75,22 @@ export async function generateMetadata({ params }: Props): Promise<Metadata | un
 }
 
 export async function generateStaticParams() {
-  const paths = allBlogs.map((p) => ({
-    slug: p.slug.split('/'),
-  }))
-  return paths
+  try {
+    const paths = allBlogs.map((p) => ({
+      slug: p.slug.split('/'),
+    }))
+
+    // 경로가 없을 경우 빈 배열 반환
+    if (!paths || paths.length === 0) {
+      console.warn('No blog posts found for static paths generation')
+      return []
+    }
+
+    return paths
+  } catch (error) {
+    console.error('Error generating static paths:', error)
+    return []
+  }
 }
 
 export default async function Page({ params }: Props) {

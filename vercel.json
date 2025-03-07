@@ -1,0 +1,17 @@
+{
+  "buildCommand": "yarn build",
+  "framework": "nextjs",
+  "installCommand": "yarn install",
+  "outputDirectory": ".next",
+  "regions": ["iad1"],
+  "builds": [
+    {
+      "src": "next.config.js",
+      "use": "@vercel/next"
+    }
+  ],
+  "env": {
+    "NEXT_PUBLIC_CONTENTLAYER_ENABLED": "true",
+    "NODE_OPTIONS": "--max-old-space-size=4096"
+  }
+}

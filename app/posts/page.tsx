@@ -12,20 +12,24 @@ export const metadata = genPageMetadata({ title: 'Blog' })
 export default function BlogPage() {
   const author = allAuthors.find((p) => p.slug === 'default') as Authors
   const posts = allCoreContent(sortPosts(allBlogs))
+
+  // 포스트가 없을 경우 빈 배열로 처리
+  const validPosts = posts && posts.length > 0 ? posts : []
+
   const pageNumber = 1
-  const initialDisplayPosts = posts.slice(
+  const initialDisplayPosts = validPosts.slice(
     POSTS_PER_PAGE * (pageNumber - 1),
     POSTS_PER_PAGE * pageNumber
   )
   const pagination = {
     currentPage: pageNumber,
-    totalPages: Math.ceil(posts.length / POSTS_PER_PAGE),
+    totalPages: Math.ceil(validPosts.length / POSTS_PER_PAGE),
   }
 
   return (
     <ListLayout
       author={author}
-      posts={posts}
+      posts={validPosts}
       initialDisplayPosts={initialDisplayPosts}
       pagination={pagination}
       title="All Posts"

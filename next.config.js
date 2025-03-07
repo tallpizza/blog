@@ -80,6 +80,13 @@ module.exports = () => {
       ],
       unoptimized,
     },
+    env: {
+      NEXT_PUBLIC_CONTENTLAYER_ENABLED: 'true',
+    },
+    onDemandEntries: {
+      maxInactiveAge: 60 * 60 * 1000,
+      pagesBufferLength: 4,
+    },
     async headers() {
       return [
         {
