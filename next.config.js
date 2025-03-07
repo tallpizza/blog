@@ -1,5 +1,8 @@
-import { withContentlayer } from 'next-contentlayer2'
-import withBundleAnalyzer from '@next/bundle-analyzer'
+const { withContentlayer } = require('next-contentlayer2')
+
+const withBundleAnalyzer = require('@next/bundle-analyzer')({
+  enabled: process.env.ANALYZE === 'true',
+})
 
 // You might need to insert additional domains in script-src if you are using external services
 const ContentSecurityPolicy = `
@@ -56,7 +59,7 @@ const basePath = process.env.BASE_PATH || undefined
 const unoptimized = process.env.UNOPTIMIZED ? true : undefined
 
 /**
- * @type {import('next').NextConfig}
+ * @type {import('next/dist/next-server/server/config').NextConfig}
  **/
 module.exports = () => {
   const plugins = [withContentlayer, withBundleAnalyzer]
