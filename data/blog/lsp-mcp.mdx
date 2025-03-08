@@ -5,11 +5,11 @@ lastmod: '2025-03-07'
 tags: ['lsp', 'mcp', 'graph-rag']
 draft: true
 summary: 'LSP 와 MCP를 활용해 코드베이스 탐색기 만들기'
-images: ['/static/images/thumbnail/mcp.webp']
+images: ['/static/images/lsp-mcp/thumbnail.webp']
 canonicalUrl: 'https://tallpizza.com/blog/posts/lsp-mcp/'
 ---
 
-![](/static/images/thumbnail/mcp.webp)
+![](/static/images/lsp-mcp/thumbnail.webp)
 
 # 목표
 
@@ -36,3 +36,111 @@ LSP도 어떤건지만 알고, 따로 사용해 본 적은 없다.
 - 자연어 입력으로 가장 적절한 코드를 가져오는지 확인해야한다.
 
 ### 4. Cursor에서 코드베이스 탐색기 사용하기
+
+# 간단한 MCP 서버 만들어보기
+
+https://github.com/modelcontextprotocol/servers 를 보면 json 형태로 만들어진 서버를 바로 사용할 수 있지만, 서버를 어떻게 만드는지 알수는 없다.
+
+[modelcontextprotocol.io](https://modelcontextprotocol.io/quickstart/user) 에 있는 내용과,
+[brave search MCP](https://github.com/modelcontextprotocol/servers/blob/main/src/brave-search/index.ts)를 참고해서 MCP 서버를 만들어 보았다.
+
+```typescript
+import { Server } from '@modelcontextprotocol/sdk/server/index.js'
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
+import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js'
+import { searchDataByKeyword } from './tools/search'
+
+// Create server instance with capabilities
+const server = new Server(
+  {
+    name: 'file_search',
+    version: '1.0.0',
+  },
+  {
+    capabilities: {
+      tools: {},
+    },
+  }
+)
+
+// Define available tools
+server.setRequestHandler(ListToolsRequestSchema, async () => {
+  return {
+    tools: [
+      {
+        name: 'search_data',
+        description: '데이터 파일에서 특정 키워드와 관련된 내용을 검색합니다.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            keyword: {
+              type: 'string',
+              description: '검색할 키워드',
+            },
+          },
+          required: ['keyword'],
+        },
+      },
+    ],
+  }
+})
+
+// Handle tool execution
+server.setRequestHandler(CallToolRequestSchema, async (request) => {
+  const { name, arguments: args } = request.params
+
+  switch (name) {
+    case 'search_data': {
+      const { keyword } = args as { keyword: string }
+
+      const hardcodedData = `          
+          ## 인공지능
+          인공지능(AI)은 인간의 학습능력, 추론능력, 지각능력을 인공적으로 구현한 컴퓨터 프로그램 또는 이를 포함한 컴퓨터 시스템입니다.
+          최근 딥러닝과 머신러닝의 발전으로 많은 분야에서 활용되고 있습니다.
+
+          ## 모델 컨텍스트 프로토콜
+          모델 컨텍스트 프로토콜(MCP)은 AI 모델과 통신하기 위한 표준화된 방법을 제공합니다.
+          이 프로토콜을 통해 클라이언트는 서버의 AI 모델과 효율적으로 대화할 수 있습니다.
+        `
+
+      try {
+        return searchDataByKeyword(keyword, hardcodedData)
+      } catch (error) {
+        console.error('데이터 검색 중 오류 발생:', error)
+        return {
+          content: [
+            {
+              type: 'text',
+              text: '데이터 검색 중 오류가 발생했습니다.',
+            },
+          ],
+        }
+      }
+    }
+
+    default:
+      throw new Error(`Tool not found: ${name}`)
+  }
+})
+
+async function main() {
+  const transport = new StdioServerTransport()
+  await server.connect(transport)
+  console.error('Weather MCP Server running on stdio')
+}
+
+main().catch((error) => {
+  console.error('Fatal error in main():', error)
+  process.exit(1)
+})
+```
+
+tools 에 대한 정보를 제공하고, 해당 툴을 사용할 때 호출되는 함수를 정의해주면 되는것 같다.  
+claude desktop 에서 확인해보면 아래와 같이 나온다.
+
+![mcp-example](/static/images/lsp-mcp/claude-screenshot.png)
+오른쪽 밑에 사용가능한 툴 갯수 1 로 표시된다.
+
+### 리뷰
+
+원래 계획했던건 Github를 연결하는거였는데 [Github연결](https://github.com/modelcontextprotocol/servers/tree/main/src/github)은 이미 만들어진게 있어서 간단하게 테스트용 툴만 만들어 보았다.
