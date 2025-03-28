@@ -2,27 +2,27 @@
 title: '코드베이스 탐색기 만들기'
 date: '2025-03-07'
 lastmod: '2025-03-07'
-tags: ['lsp', 'mcp', 'graph-rag']
-draft: true
-summary: 'LSP 와 MCP를 활용해 코드베이스 탐색기 만들기'
-images: ['/static/images/lsp-mcp/thumbnail.webp']
+tags: ['ast', 'mcp', 'graph-rag']
+draft: false
+summary: 'AST 와 MCP를 활용해 코드베이스 탐색기 만들기'
+images: ['/static/images/lsp-mcp/thumbnail.png']
 canonicalUrl: 'https://tallpizza.com/blog/posts/lsp-mcp/'
 ---
 
-![](/static/images/lsp-mcp/thumbnail.webp)
+![](/static/images/lsp-mcp/thumbnail.png)
 
-# 목표
+# 목표 🎯
 
 Cursor로 프론트 개발을 할 때 백앤드 코드를 알아서 찾아오도록 MCP서버를 만들고 연결하기
 
-# 단계
+# 구현 계획 🎨
 
-### 1. 간단한 MCP 서버 만들어보기
+### 1. 간단한 MCP 서버 만들어보기 🛠️
 
 아직 MCP 가 어떤건지만 알고 한 번도 사용해 본 적은 없다.  
 Claude 데스크톱 버전에서 github 연결하는 mcp예제 따라서 만들어보자
 
-### 2. LSP를 사용해서 코드베이스 postgres 에 저장하기
+### 2. LSP를 사용해서 코드베이스 postgres 에 저장하기 💾
 
 LSP도 어떤건지만 알고, 따로 사용해 본 적은 없다.
 
@@ -31,13 +31,13 @@ LSP도 어떤건지만 알고, 따로 사용해 본 적은 없다.
 - 코드들을 Graph RAG 처럼 사용하려하는데, 해당 코드와 관련있는 다른 부분을 찾아오는 방법을 찾아야한다
   - A함수 안에 참조하고있는 다른 함수나 상수를 연결시켜 저장하는것이 목표
 
-### 3. MCP서버에서 사용가능한 함수들 만들기
+### 3. MCP서버에서 사용가능한 함수들 만들기 ⚙️
 
 - 자연어 입력으로 가장 적절한 코드를 가져오는지 확인해야한다.
 
-### 4. Cursor에서 코드베이스 탐색기 사용하기
+### 4. Cursor에서 코드베이스 탐색기 사용하기 🔍
 
-# 간단한 MCP 서버 만들어보기
+# 1. 간단한 MCP 서버 만들어보기 🚀
 
 https://github.com/modelcontextprotocol/servers 를 보면 json 형태로 만들어진 서버를 바로 사용할 수 있지만, 서버를 어떻게 만드는지 알수는 없다.
 
@@ -144,3 +144,74 @@ claude desktop 에서 확인해보면 아래와 같이 나온다.
 ### 리뷰
 
 원래 계획했던건 Github를 연결하는거였는데 [Github연결](https://github.com/modelcontextprotocol/servers/tree/main/src/github)은 이미 만들어진게 있어서 간단하게 테스트용 툴만 만들어 보았다.
+
+# 코드베이스 탐색기 만들기 🗂️
+
+## 2. LSP 사용해서 코드베이스 저장하기 📦
+
+처음에는 lsp를 사용해서 코드베이스를 함수, 클래스, const단위로 쪼개서 저장하려고 했는데, lsp에서 사용하는 symbol의 형태가 내가 생각하는거와 달랐다.
+
+그래서 좀더 찾아보니 vscode 위에 보여지는 함수리스트 들이 어떻게 보여지나 찾아보니 AST(Abstract Syntax Tree) 라는것을 알게 되었다.
+![](/static/images/lsp-mcp/ast.png)
+
+이걸 사용해서 전체 코드베이스를 db에 저장했다.
+
+| path                          | code                                                                                | type     | name                | start | end | dependencies                                    | dependents                                                                                                                                                                                                              |
+| ----------------------------- | ----------------------------------------------------------------------------------- | -------- | ------------------- | ----- | --- | ----------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| src/api/sample/users/route.ts | `const data = await customModuleService.getMembers(cleanFilter)`                    | constant | data                | 26    | 26  | `["data","customModuleService","cleanFilter"]`  | `[]`                                                                                                                                                                                                                    |
+| src/api/sample/users/route.ts | `const cleanFilter = Object.entries(filter).reduce((acc, [key, value]) => { ... })` | constant | cleanFilter         | 19    | 24  | `["filter","key","UserFilter"]`                 | `["GET","cleanFilter","data"]`                                                                                                                                                                                          |
+| src/api/sample/users/route.ts | `export async function GET(req: MedusaRequest, res: MedusaResponse)`                | function | GET                 | 5     | 29  | `["GET","customModuleService","CUSTOM_MODULE"]` | `[]`                                                                                                                                                                                                                    |
+| src/api/sample/users/route.ts | `const customModuleService = req.scope.resolve(CUSTOM_MODULE)`                      | constant | customModuleService | 6     | 8   | `["customModuleService","CUSTOM_MODULE"]`       | `[]`                                                                                                                                                                                                                    |
+| src/api/sample/users/route.ts | `const filter = {...};`                                                             | constant | filter              | 10    | 16  | `["query"]`                                     | `["updateBrandLinks","brandIdsToRemove","checkProductInfoExists","updateTargets","validateProductExists","validatedProducts","run","GET","filter","cleanFilter","POST","order","CustomModuleService","limit","offset"]` |
+
+이런 형태가 db에 저장이 된다.
+
+## 3. MCP 서버 만들기 🔧
+
+`create_code_chunks`
+`list_files`
+`read_file`
+`search_code_chunks`
+
+이렇게 4개의 툴을 만들었다. 프로젝트를 만들고, 전체 프로젝트 db에 저장하는 함수도 있긴한데,  
+그것들은 mcp로 사용할일이 많지 않을꺼 같아 추후에 파라미터로 사용할수 있도록 할 생각이다.
+
+cursor에서
+
+```json
+{
+  "mcpServers": {
+    "backend-query": {
+      "command": "node",
+      "args": ["{ABSOLUTE_PATH_TO_MCP_SERVER}/build/index.js", "{PROJECT_ID}"],
+      "env": {
+        "DATABASE_URL": "{DATABASE_URL}",
+        "OPENAI_API_KEY": "{OPENAI_API_KEY}"
+      }
+    }
+  }
+}
+```
+
+이렇게 설정하면 된다.
+
+전체 mcp 서버 코드는 [여기](https://github.com/tallpizza/mcp-codebase) 에 있다.
+
+### Cursor에서 코드베이스 탐색기 사용하기 🔍
+
+![cursor-screenshot](/static/images/lsp-mcp/cursor.png)
+
+사용하는걸 보면 임베딩 검색으로 관련파일들 검색후, 전체 파일내용을 찾아보는듯 하다.
+
+# 후기 💭
+
+생각보다 lsp 사용하는게 복잡했었다.🥲 AST 를 찾은게 다행이였다.
+
+프론트에서 백엔드 코드를 물어보면 커서가 바로바로 mcp툴을 사용하지 않는다 🤔, mcp를사용하라 명시해줘야 가져오긴하지만
+임베딩 기반 검색이여서 잘 가져오긴한다.
+
+백엔드 코드가 업데이트 될때마다, db에 업데이트 해줘야하는데, 아직 git 과 연동하는 기능까지는 없다 😅 사용해보다가 쓸모 있다 느껴지면 그떄 추가하는걸로..
+
+아직은 로컬에 있는 파일을 읽을수만 있어서, 팀원들과 공유가 좀 복잡하긴 하다.
+
+🥰 실제 코딩할때 사용하는걸 만드니까 뿌듯하긴 하다.
