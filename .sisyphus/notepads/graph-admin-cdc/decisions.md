@@ -80,3 +80,75 @@ cd apps/web && bun test
 cd apps/web && bun run test:e2e
 # Output: 6 passed (Playwright across chromium, firefox, webkit)
 ```
+
+## [2026-01-29] Task 6 Decision: Skip Neo4j CDC Monitoring
+
+### Problem
+Neo4j Kafka Connector 5.1.19 is incompatible with Neo4j 5.26.20 CDC implementation.
+
+### Decision: SKIP for now
+- Core pipeline (PostgreSQL → Neo4j) works ✅
+- Neo4j CDC monitoring is nice-to-have, not critical
+- Continue with remaining tasks
+
+### Impact
+- Task 12: CDC Event Viewer will show only PostgreSQL events
+- Task 13: E2E tests will verify main pipeline only
+
+
+## [2026-01-29] Task 7 Decision: Graph Library Selection
+
+### Decision: @neo4j-nvl/react
+
+**선택: @neo4j-nvl/react (Neo4j Visualization Library)**
+
+### Rationale
+
+1. **Official Neo4j Library**
+   - Maintained by Neo4j team
+   - Guaranteed compatibility with Neo4j data structures
+   - Aligns with project's Neo4j-centric architecture
+
+2. **Performance**
+   - Handles 5000+ nodes @ 60fps (WebGL rendering)
+   - React Flow limited to 500-1000 nodes
+   - E-commerce domain can have large graphs (10K+ nodes)
+
+3. **Drag-to-Link**
+   - Built-in DrawInteraction component
+   - Less boilerplate than React Flow's onConnect handler
+   - Native support for relationship type selection
+
+4. **Neo4j Integration**
+   - Direct support for Neo4j node/relationship objects
+   - No manual data transformation required
+   - Built-in property visualization
+
+### Trade-offs Accepted
+
+- **Less customization flexibility**: Acceptable for admin UI (not consumer-facing)
+- **Smaller community**: Mitigated by official Neo4j support
+- **Larger bundle size** (~150KB vs 80KB): Justified by performance gains
+
+### Implementation Plan
+
+- **Task 9**: Create GraphViewer component with InteractiveNvlWrapper
+- **Task 11**: Implement drag-to-link via DrawInteraction
+- **Task 13**: Performance test with 1000+ node dataset
+
+### Evaluation Document
+
+Full comparison available in `docs/graph-library-evaluation.md`:
+- Performance benchmarks (NVL 3.7x faster)
+- Feature comparison table
+- Neo4j compatibility analysis
+- Risk mitigation strategies
+
+### Verification
+
+```bash
+ls docs/graph-library-evaluation.md
+grep -i "선택:" docs/graph-library-evaluation.md
+# Expected: "@neo4j-nvl/react"
+```
+
