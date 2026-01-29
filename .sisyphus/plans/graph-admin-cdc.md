@@ -954,7 +954,7 @@ Critical Path: Task 1 → Task 4,5 → Task 8 → Task 9,10,11 → Task 13
 
 ### Phase 4: Integration
 
-- [ ] 13. E2E 테스트 및 통합 검증
+- [x] 13. E2E 테스트 및 통합 검증
 
   **What to do**:
   - 전체 플로우 E2E 테스트:
