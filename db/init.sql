@@ -1,12 +1,6 @@
 -- E-commerce Database Schema with CDC Configuration
 -- Created for Debezium CDC integration
 
--- Create database (if not exists)
-CREATE DATABASE IF NOT EXISTS ecommerce;
-
--- Connect to ecommerce database
-\c ecommerce
-
 -- Enable logical replication (required for CDC)
 ALTER SYSTEM SET wal_level = logical;
 
