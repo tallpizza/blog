@@ -756,7 +756,7 @@ Critical Path: Task 1 → Task 4,5 → Task 8 → Task 9,10,11 → Task 13
 
 ---
 
-- [ ] 10. 노드 CRUD UI
+- [x] 10. 노드 CRUD UI
 
   **What to do**:
   - NodePanel 컴포넌트:

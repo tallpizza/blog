@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@neo4j-nvl/react": "^1.0.0",
+    "@tanstack/react-query": "^5.90.20",
     "neo4j-driver": "^6.0.1",
     "next": "16.1.6",
     "pg": "^8.17.2",

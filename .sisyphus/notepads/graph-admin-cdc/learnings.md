@@ -491,3 +491,46 @@
 - apps/web/app/page.tsx (11 lines)
 - apps/web/tests/graph-viewer.e2e.ts (10 lines)
 
+
+## Task 10: Node CRUD UI with TanStack Query
+
+### Implementation
+- Installed @tanstack/react-query@5.90.20
+- Created QueryProvider wrapper with QueryClient configuration
+- Created NodePanel component with create node form
+- Integrated with existing GraphViewer
+- Form supports all node types: Product, Category, Customer, Order
+- Dynamic form fields based on node type
+
+### TanStack Query Patterns
+- useMutation for create operations
+- queryClient.invalidateQueries to refresh graph after mutation
+- Optimistic updates via mutation callbacks
+- Error handling with isError and error.message
+
+### Component Architecture
+- QueryProvider wraps entire app for React Query context
+- NodePanel positioned absolutely (top-right) over graph
+- Form opens/closes with state management
+- data-testid attributes for E2E testing
+
+### Form Fields by Type
+- Product: name, price, category_id
+- Category: name
+- Customer: name, email
+- Order: name, total
+
+### Verification Results
+- ✅ Build succeeds
+- ✅ All 24 Vitest tests pass
+- ✅ 3 Playwright tests pass (node creation flow)
+- ✅ Screenshot captured: .sisyphus/evidence/task-10-node-create.png
+- ✅ Node creation works via UI
+- ✅ Graph refreshes after node creation
+
+### Files Created
+- apps/web/components/providers/QueryProvider.tsx (18 lines)
+- apps/web/components/nodes/NodePanel.tsx (165 lines)
+- apps/web/tests/node-crud.e2e.ts (16 lines)
+- apps/web/app/page.tsx (updated to include NodePanel)
+
