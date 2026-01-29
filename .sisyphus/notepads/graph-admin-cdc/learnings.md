@@ -374,7 +374,7 @@
 - Conversion required for JSON serialization to work correctly
 
 ### Next.js App Router Structure
-- **CRITICAL**: App directory is at `apps/web/app/` NOT `apps/web/src/app/`
+- **CRITICAL**: App directory is at `frontend/app/` NOT `frontend/src/app/`
 - API routes follow pattern: `app/api/{endpoint}/route.ts`
 - Dynamic routes use bracket notation: `app/api/nodes/[id]/route.ts`
 - Route handlers export named functions: `GET`, `POST`, `PUT`, `DELETE`
@@ -487,9 +487,9 @@
 - ✅ Color-coding works by label type
 
 ### Files Created
-- apps/web/components/graph/GraphViewer.tsx (165 lines)
-- apps/web/app/page.tsx (11 lines)
-- apps/web/tests/graph-viewer.e2e.ts (10 lines)
+- frontend/components/graph/GraphViewer.tsx (165 lines)
+- frontend/app/page.tsx (11 lines)
+- frontend/tests/graph-viewer.e2e.ts (10 lines)
 
 
 ## Task 10: Node CRUD UI with TanStack Query
@@ -529,10 +529,10 @@
 - ✅ Graph refreshes after node creation
 
 ### Files Created
-- apps/web/components/providers/QueryProvider.tsx (18 lines)
-- apps/web/components/nodes/NodePanel.tsx (165 lines)
-- apps/web/tests/node-crud.e2e.ts (16 lines)
-- apps/web/app/page.tsx (updated to include NodePanel)
+- frontend/components/providers/QueryProvider.tsx (18 lines)
+- frontend/components/nodes/NodePanel.tsx (165 lines)
+- frontend/tests/node-crud.e2e.ts (16 lines)
+- frontend/app/page.tsx (updated to include NodePanel)
 
 
 ## Task 12: CDC Event Viewer Page
@@ -559,8 +559,8 @@
 - ✅ Redpanda Console link works
 
 ### Files Created
-- apps/web/app/events/page.tsx (62 lines)
-- apps/web/tests/event-viewer.e2e.ts (14 lines)
+- frontend/app/events/page.tsx (62 lines)
+- frontend/tests/event-viewer.e2e.ts (14 lines)
 
 
 ## Task 13: E2E Integration Tests & Final Verification
@@ -607,6 +607,6 @@
 - Total: 36 tests passing
 
 ### Files Created
-- apps/web/tests/e2e-full-flow.e2e.ts (22 lines)
+- frontend/tests/e2e-full-flow.e2e.ts (22 lines)
 - README.md (250+ lines)
 

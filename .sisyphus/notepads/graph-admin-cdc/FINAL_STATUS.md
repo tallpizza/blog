@@ -60,7 +60,7 @@ redpanda-console   Up (healthy)
 
 ### Tests
 ```bash
-$ cd apps/web && bun test
+$ cd frontend && bun test
 ✅ 24 pass, 0 fail
 
 $ bunx playwright test
@@ -83,7 +83,7 @@ $ curl -s http://localhost:7475/db/neo4j/tx/commit \
 
 ### Build
 ```bash
-$ cd apps/web && bun run build
+$ cd frontend && bun run build
 ✓ Compiled successfully
 ```
 **Result**: ✅ Build succeeds

@@ -139,7 +139,7 @@ graph-admin/
 │   ├── postgres-source.json   # Debezium (✅ working)
 │   ├── neo4j-sink.json        # Neo4j sink (✅ working)
 │   └── neo4j-source.json      # Neo4j CDC (⚠️ blocked)
-├── apps/web/                  # Next.js 16 app
+├── frontend/                  # Next.js 16 app
 │   ├── app/
 │   │   ├── page.tsx           # Graph viewer
 │   │   ├── events/page.tsx    # Event viewer
@@ -184,7 +184,7 @@ docker compose up -d
 docker compose ps  # All should be "healthy"
 
 # 3. Start Next.js
-cd apps/web
+cd frontend
 bun install
 bun dev
 

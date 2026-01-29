@@ -64,7 +64,7 @@ This requires adding `updated_at` timestamp to all nodes.
 ## Task 8: Issues Encountered
 
 ### Issue 1: Next.js App Directory Location
-- **Problem**: Created API routes in `apps/web/src/app/api/` but Next.js expected `apps/web/app/api/`
+- **Problem**: Created API routes in `frontend/src/app/api/` but Next.js expected `frontend/app/api/`
 - **Symptom**: All API routes returned 404 even though files existed
 - **Root Cause**: Next.js 16 App Router looks for routes in `app/` directory at project root
 - **Solution**: Moved `src/app/api/` to `app/api/` and `src/lib/` to `lib/`

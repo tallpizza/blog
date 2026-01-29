@@ -17,10 +17,10 @@
    - Tests located in `tests/` directory (separate from Vitest)
 
 3. **Directory Structure**
-   - Next.js App Router at `apps/web/app/`
-   - Vitest tests in `apps/web/__tests__/`
-   - Playwright tests in `apps/web/tests/`
-   - Public assets in `apps/web/public/`
+   - Next.js App Router at `frontend/app/`
+   - Vitest tests in `frontend/__tests__/`
+   - Playwright tests in `frontend/tests/`
+   - Public assets in `frontend/public/`
 
 4. **Dependencies Installed**
    - vitest@4.0.18
@@ -74,10 +74,10 @@
 
 ### Verification
 ```bash
-cd apps/web && bun test
+cd frontend && bun test
 # Output: 3 pass, 0 fail (Vitest only)
 
-cd apps/web && bun run test:e2e
+cd frontend && bun run test:e2e
 # Output: 6 passed (Playwright across chromium, firefox, webkit)
 ```
 

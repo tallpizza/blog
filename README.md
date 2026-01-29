@@ -70,7 +70,7 @@ All services should show "healthy" status.
 ### 3. Start Next.js App
 
 ```bash
-cd apps/web
+cd frontend
 bun install
 bun dev
 ```
@@ -87,7 +87,7 @@ Open http://localhost:3000
 ## Testing
 
 ```bash
-cd apps/web
+cd frontend
 
 # Unit tests (Vitest)
 bun test
@@ -179,7 +179,7 @@ graph-admin/
 ├── connectors/
 │   ├── postgres-source.json   # Debezium connector
 │   └── neo4j-sink.json        # Neo4j sink connector
-├── apps/web/                  # Next.js application
+├── frontend/                  # Next.js application
 │   ├── app/                   # App Router pages
 │   ├── components/            # React components
 │   ├── lib/                   # Database clients
