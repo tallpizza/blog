@@ -1,0 +1,28 @@
+{
+  "name": "neo4j-sink",
+  "config": {
+    "connector.class": "org.neo4j.connectors.kafka.sink.Neo4jConnector",
+    "topics": "pg-cdc.public.categories,pg-cdc.public.products,pg-cdc.public.customers,pg-cdc.public.orders,pg-cdc.public.order_items",
+    "neo4j.uri": "bolt://neo4j:7687",
+    "neo4j.authentication.type": "BASIC",
+    "neo4j.authentication.basic.username": "neo4j",
+    "neo4j.authentication.basic.password": "neo4j_password",
+    "key.converter": "org.apache.kafka.connect.json.JsonConverter",
+    "value.converter": "org.apache.kafka.connect.json.JsonConverter",
+    "key.converter.schemas.enable": false,
+    "value.converter.schemas.enable": false,
+    "errors.tolerance": "all",
+    "errors.log.enable": true,
+    "errors.log.include.messages": true,
+    
+    "neo4j.cypher.topic.pg-cdc.public.categories": "WITH event CALL apoc.do.when(event.op = 'd', 'MATCH (c:Category {id: before.id}) DETACH DELETE c', 'MERGE (c:Category {id: after.id}) SET c.name = after.name, c.description = after.description', {after: event.after, before: event.before}) YIELD value RETURN value",
+    
+    "neo4j.cypher.topic.pg-cdc.public.products": "WITH event CALL apoc.do.when(event.op = 'd', 'MATCH (p:Product {id: before.id}) DETACH DELETE p', 'MERGE (p:Product {id: after.id}) SET p.name = after.name, p.price = after.price WITH p, after.category_id AS category_id WHERE category_id IS NOT NULL MERGE (c:Category {id: category_id}) MERGE (p)-[:BELONGS_TO]->(c)', {after: event.after, before: event.before}) YIELD value RETURN value",
+    
+    "neo4j.cypher.topic.pg-cdc.public.customers": "WITH event CALL apoc.do.when(event.op = 'd', 'MATCH (cu:Customer {id: before.id}) DETACH DELETE cu', 'MERGE (cu:Customer {id: after.id}) SET cu.name = after.name, cu.email = after.email', {after: event.after, before: event.before}) YIELD value RETURN value",
+    
+    "neo4j.cypher.topic.pg-cdc.public.orders": "WITH event CALL apoc.do.when(event.op = 'd', 'MATCH (o:Order {id: before.id}) DETACH DELETE o', 'MERGE (o:Order {id: after.id}) SET o.order_date = after.order_date, o.total = after.total WITH o, after.customer_id AS customer_id WHERE customer_id IS NOT NULL MERGE (cu:Customer {id: customer_id}) MERGE (cu)-[:PLACED]->(o)', {after: event.after, before: event.before}) YIELD value RETURN value",
+    
+    "neo4j.cypher.topic.pg-cdc.public.order_items": "WITH event CALL apoc.do.when(event.op = 'd', 'MATCH (o:Order {id: before.order_id})-[r:CONTAINS]->(p:Product {id: before.product_id}) DELETE r', 'MERGE (o:Order {id: after.order_id}) MERGE (p:Product {id: after.product_id}) MERGE (o)-[r:CONTAINS]->(p) SET r.quantity = after.quantity, r.price = after.price', {after: event.after, before: event.before}) YIELD value RETURN value"
+  }
+}
