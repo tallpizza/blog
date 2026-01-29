@@ -451,3 +451,43 @@
 - Singleton pattern prevents multiple Neo4j driver instances
 - Dynamic SQL field building enables partial updates
 - Proper HTTP status codes improve API usability (201 for creation, 204 for deletion)
+
+## Task 9: Graph Visualization Component with @neo4j-nvl/react
+
+### Implementation
+- Installed @neo4j-nvl/react@1.0.0
+- Created GraphViewer component using InteractiveNvlWrapper
+- Implemented color-coding by label: Category (blue), Product (green), Customer (purple), Order (orange)
+- Added node click handler with side panel for details
+- Used force-directed layout
+
+### SSR Issues
+- NVL library requires browser APIs (document, canvas)
+- Solution: Use dynamic import with ssr: false in client component
+- Page must be marked with 'use client' directive
+
+### NVL API Learnings
+- Creates 2 canvas elements: nvl-gl-canvas (WebGL) and nvl-c2d-canvas (2D fallback)
+- Layout option is 'forceDirected' (camelCase), not 'force-directed'
+- Nodes require: id (string), labels, properties, size, color
+- Relationships require: id (string), from, to, type, properties
+- mouseEventCallbacks.onNodeClick receives node object with id
+
+### Playwright Testing
+- Use `.first()` when locating canvas (NVL creates 2 canvases)
+- Screenshot path is relative to test execution directory
+- Canvas click events can be intercepted by overlay divs
+
+### Verification Results
+- ✅ Build succeeds (Next.js 16)
+- ✅ All 24 Vitest tests pass
+- ✅ 3 Playwright tests pass (chromium, firefox, webkit)
+- ✅ Screenshot captured: .sisyphus/evidence/task-9-graph-render.png (23KB)
+- ✅ Graph renders with nodes and relationships
+- ✅ Color-coding works by label type
+
+### Files Created
+- apps/web/components/graph/GraphViewer.tsx (165 lines)
+- apps/web/app/page.tsx (11 lines)
+- apps/web/tests/graph-viewer.e2e.ts (10 lines)
+

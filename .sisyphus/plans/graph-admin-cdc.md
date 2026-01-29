@@ -696,7 +696,7 @@ Critical Path: Task 1 → Task 4,5 → Task 8 → Task 9,10,11 → Task 13
 
 ---
 
-- [ ] 9. 그래프 시각화 컴포넌트
+- [x] 9. 그래프 시각화 컴포넌트
 
   **What to do**:
   - Task 7에서 선택된 라이브러리로 그래프 컴포넌트 구현
