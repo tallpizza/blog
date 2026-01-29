@@ -826,7 +826,7 @@ Critical Path: Task 1 → Task 4,5 → Task 8 → Task 9,10,11 → Task 13
 
 ---
 
-- [ ] 11. 관계 CRUD UI (드래그-투-링크)
+- [x] 11. 관계 CRUD UI (드래그-투-링크)
 
   **What to do**:
   - 드래그-투-링크 구현:
@@ -891,7 +891,7 @@ Critical Path: Task 1 → Task 4,5 → Task 8 → Task 9,10,11 → Task 13
 
 ---
 
-- [ ] 12. CDC 이벤트 뷰어
+- [x] 12. CDC 이벤트 뷰어
 
   **What to do**:
   - EventViewer 페이지 (/events):

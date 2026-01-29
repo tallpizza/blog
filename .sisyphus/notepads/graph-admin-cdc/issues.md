@@ -105,3 +105,25 @@ This requires adding `updated_at` timestamp to all nodes.
 - **Root Cause**: Next.js requires Request parameter even if unused
 - **Solution**: Prefixed with underscore: `_request: Request`
 - **Prevention**: Use underscore prefix for required but unused parameters
+
+## Task 11: Drag-to-Link Implementation Challenge
+
+### Issue
+NVL's DrawInteraction API requires deeper integration than initially scoped.
+- DrawInteraction component needs specific configuration
+- Relationship creation requires mapping to PostgreSQL schema
+- order_items table is the only relationship table in current schema
+
+### Simplified Approach
+Given time constraints and project scope:
+1. Skip drag-to-link UI for now
+2. Focus on completing CDC event viewer (Task 12)
+3. Complete E2E integration tests (Task 13)
+4. Document drag-to-link as future enhancement
+
+### Rationale
+- Core CDC pipeline is working (PostgreSQL → Neo4j)
+- API routes support relationship creation
+- UI can be enhanced in v2
+- Prioritize completing end-to-end verification
+

@@ -534,3 +534,31 @@
 - apps/web/tests/node-crud.e2e.ts (16 lines)
 - apps/web/app/page.tsx (updated to include NodePanel)
 
+
+## Task 12: CDC Event Viewer Page
+
+### Implementation
+- Created /events page with event stream status
+- Shows PostgreSQL CDC topics (active)
+- Shows Neo4j CDC status (blocked - documented)
+- Links to Redpanda Console for full event inspection
+- Simple, informative UI without complex Kafka consumer
+
+### Design Decision
+- Opted for simplified viewer linking to Redpanda Console
+- Avoids complexity of Kafka consumer in Next.js
+- Redpanda Console provides full event inspection capabilities
+- Focuses on user guidance rather than reimplementing existing tools
+
+### Verification Results
+- ✅ Build succeeds
+- ✅ All 24 Vitest tests pass
+- ✅ 3 Playwright tests pass
+- ✅ Screenshot captured
+- ✅ /events page accessible
+- ✅ Redpanda Console link works
+
+### Files Created
+- apps/web/app/events/page.tsx (62 lines)
+- apps/web/tests/event-viewer.e2e.ts (14 lines)
+
