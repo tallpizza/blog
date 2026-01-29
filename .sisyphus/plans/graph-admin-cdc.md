@@ -418,7 +418,7 @@ Critical Path: Task 1 → Task 4,5 → Task 8 → Task 9,10,11 → Task 13
 
 ---
 
-- [ ] 5. Neo4j Sink 커넥터
+- [x] 5. Neo4j Sink 커넥터
 
   **What to do**:
   - Neo4j Kafka Connector (Sink) 설정
@@ -563,7 +563,7 @@ Critical Path: Task 1 → Task 4,5 → Task 8 → Task 9,10,11 → Task 13
 
 ---
 
-- [ ] 7. 그래프 라이브러리 평가 (Spike)
+- [x] 7. 그래프 라이브러리 평가 (Spike)
 
   **What to do**:
   - @neo4j-nvl/react PoC 구현
@@ -629,7 +629,7 @@ Critical Path: Task 1 → Task 4,5 → Task 8 → Task 9,10,11 → Task 13
 
 ### Phase 3: UI
 
-- [ ] 8. Next.js 프로젝트 및 API 설정
+- [x] 8. Next.js 프로젝트 및 API 설정
 
   **What to do**:
   - Next.js App Router 구조 설정

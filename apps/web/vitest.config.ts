@@ -9,10 +9,11 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./vitest.setup.ts'],
     include: ['**/__tests__/**/*.test.ts', '**/__tests__/**/*.test.tsx'],
+    exclude: ['**/node_modules/**', '**/dist/**', '**/tests/**', '**/*.spec.ts'],
   },
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './app'),
+      '@': path.resolve(__dirname, './src'),
     },
   },
 })

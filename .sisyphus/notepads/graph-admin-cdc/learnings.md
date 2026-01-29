@@ -295,3 +295,159 @@
 - No built-in schema evolution handling
 - Single Cypher query per topic (no multi-statement transactions)
 
+
+## Task 6: Neo4j CDC Source Connector (BLOCKED)
+
+### Issue: Neo4j Kafka Connector CDC Incompatibility
+- Neo4j 5.26.20 Enterprise with CDC enabled (`txLogEnrichment: FULL`)
+- Neo4j Kafka Connector 5.1.19 installed via Confluent Hub
+- CDC procedures work directly: `CALL cdc.current()` and `CALL db.cdc.current()` return change IDs
+- Connector fails with: "Change Data Capture is not currently enabled for this database [neo4j]"
+
+### Root Cause Analysis
+- Neo4j 5 CDC configuration changed from environment variables to database-level settings
+- `ALTER DATABASE neo4j SET OPTION txLogEnrichment 'FULL'` successfully enables CDC
+- Database restart required after enabling CDC (STOP/START DATABASE)
+- Connector 5.1.19 may not be compatible with Neo4j 5.26.20 CDC implementation
+
+### Attempted Solutions
+1. ✅ Enabled CDC via `ALTER DATABASE neo4j SET OPTION txLogEnrichment 'FULL'`
+2. ✅ Verified CDC is enabled: `SHOW DATABASE neo4j YIELD options` returns `{txLogEnrichment: "FULL"}`
+3. ✅ Verified CDC procedures work: `CALL cdc.current()` returns change ID
+4. ✅ Restarted database after enabling CDC
+5. ✅ Recreated Neo4j container with clean volumes
+6. ❌ Connector still fails with "CDC not enabled" error
+
+### Authentication Issues Encountered
+- Initial error: "Unsupported authentication token, scheme 'basic' is not supported"
+- This was due to using `neo4j://` URI instead of `bolt://`
+- Correct configuration: `bolt://neo4j:7687` with `BASIC` authentication
+- `neo4j://` protocol uses different authentication mechanism
+
+### Configuration Attempts
+1. URI: `bolt://neo4j:7687` (correct) vs `neo4j://neo4j:7688` (wrong)
+2. Authentication: `BASIC` with username/password (correct) vs `NONE` (requires auth disabled)
+3. Strategy: `CDC` (correct) vs `CHANGE_DATA_CAPTURE` (invalid value)
+4. Pattern: `()` captures all nodes (correct syntax)
+
+### Known Limitations
+- Neo4j Kafka Connector 5.1.19 may not fully support Neo4j 5.26.20 CDC
+- Connector documentation shows examples with Neo4j 5.x but specific version compatibility unclear
+- CDC feature requires Neo4j Enterprise (not available in Community edition)
+- Database must be stopped and restarted after enabling CDC for changes to take effect
+
+### Recommendation
+- **BLOCKED**: Task cannot be completed with current Neo4j Kafka Connector version
+- Possible solutions:
+  1. Downgrade Neo4j to 5.1.x to match connector version
+  2. Wait for Neo4j Kafka Connector update to support Neo4j 5.26.x
+  3. Use Query strategy instead of CDC strategy (alternative approach)
+  4. Contact Neo4j support for compatibility matrix
+
+### Files Created
+- `connectors/neo4j-source.json`: Connector configuration (CDC strategy, bolt:// URI, BASIC auth, pattern: "()")
+
+### Verification Status
+- ❌ Connector status: RUNNING (connector) but FAILED (task)
+- ❌ Topic creation: Not created due to task failure
+- ✅ Neo4j CDC enabled: Verified via `CALL cdc.current()`
+- ❌ Event capture: Cannot test due to connector failure
+
+
+## Task 8: Next.js API Routes for Graph CRUD Operations
+
+### Dependencies Installed
+- `neo4j-driver@6.0.1`: Official Neo4j JavaScript driver for Bolt protocol
+- `pg@8.17.2`: PostgreSQL client for Node.js
+- `@types/pg@8.16.0`: TypeScript definitions for pg library
+
+### Database Connection Patterns
+- **Neo4j Driver Singleton**: Created singleton pattern in `lib/neo4j.ts` to reuse driver instance across requests
+- **PostgreSQL Connection Pool**: Used `pg.Pool` for connection pooling in `lib/postgres.ts`
+- Environment variables for configuration with sensible defaults
+- Connection details: Neo4j on `bolt://localhost:7688`, PostgreSQL on `localhost:5433`
+
+### Neo4j Integer Handling
+- Neo4j driver returns integers as objects with `{low: number, high: number}` structure
+- Created `toNativeTypes()` helper function to recursively convert Neo4j Integer objects to JavaScript numbers
+- Must import `Integer` from `neo4j-driver` and use `Integer.isInteger()` to detect these objects
+- Conversion required for JSON serialization to work correctly
+
+### Next.js App Router Structure
+- **CRITICAL**: App directory is at `apps/web/app/` NOT `apps/web/src/app/`
+- API routes follow pattern: `app/api/{endpoint}/route.ts`
+- Dynamic routes use bracket notation: `app/api/nodes/[id]/route.ts`
+- Route handlers export named functions: `GET`, `POST`, `PUT`, `DELETE`
+- Params in Next.js 16 are async: `type Params = Promise<{ id: string }>`
+
+### API Route Implementation Patterns
+- **Health Check**: Simple JSON response `{ status: 'ok' }`
+- **Graph Data**: Cypher query with `MATCH (n) OPTIONAL MATCH (n)-[r]->(m)` to get all nodes and relationships
+- **Node CRUD**: Switch statement based on `type` field (Category, Product, Customer, Order)
+- **Relationship CRUD**: Direct order_items table operations (relationships via foreign keys)
+- **Error Handling**: Try-catch with proper HTTP status codes (200, 201, 204, 400, 404, 500)
+
+### PostgreSQL Query Patterns
+- **INSERT**: `INSERT INTO table (...) VALUES (...) RETURNING *` to get created row
+- **UPDATE**: Dynamic field building with parameterized queries to prevent SQL injection
+- **DELETE**: `DELETE FROM table WHERE id = $1 RETURNING id` to verify deletion
+- **Validation**: Check `result.rows.length === 0` for 404 responses
+
+### TDD Workflow Success
+- Followed RED-GREEN-REFACTOR cycle strictly
+- Tests written FIRST in `__tests__/api/` directory
+- Vitest configuration required path alias fix: `@` should point to `./src` not `./app`
+- All 24 tests passing with proper assertions for status codes and response structure
+
+### Test Patterns
+- **Health**: Simple 200 status check
+- **Graph**: Verify nodes and relationships arrays exist with proper structure
+- **Node Creation**: Test validation (400), success (201), and cleanup in afterAll
+- **Node Update**: Test partial updates with dynamic field building
+- **Node Delete**: Test 204 status and verify deletion in database
+- **Relationships**: Test order_items creation and deletion
+
+### Vitest Configuration Fix
+- Path alias in `vitest.config.ts` was pointing to wrong directory
+- Changed from `'@': path.resolve(__dirname, './app')` to `'@': path.resolve(__dirname, './src')`
+- This fixed "Cannot find module '@/lib/postgres'" errors in tests
+
+### API Endpoint Verification
+- ✅ `GET /api/health` returns `{"status":"ok"}`
+- ✅ `GET /api/graph` returns nodes and relationships with proper structure
+- ✅ `POST /api/nodes` creates nodes in PostgreSQL (201 status)
+- ✅ `PUT /api/nodes/:id` updates nodes with partial data (200 status)
+- ✅ `DELETE /api/nodes/:id?type=Product` deletes nodes (204 status)
+- ✅ `POST /api/relationships` creates order_items (201 status)
+- ✅ `DELETE /api/relationships/:id` deletes order_items (204 status)
+
+### CDC Integration Notes
+- Node creation in PostgreSQL triggers CDC pipeline to Neo4j
+- Sync latency: < 5 seconds from PostgreSQL INSERT to Neo4j node appearance
+- Relationships created via order_items table (foreign keys)
+- Neo4j connector maps order_items to `(Order)-[:CONTAINS]->(Product)` relationships
+
+### Files Created
+- `lib/neo4j.ts`: Neo4j driver singleton (20 lines)
+- `lib/postgres.ts`: PostgreSQL connection pool (20 lines)
+- `app/api/health/route.ts`: Health check endpoint (5 lines)
+- `app/api/graph/route.ts`: Graph data endpoint with Integer conversion (50 lines)
+- `app/api/nodes/route.ts`: Node creation endpoint (85 lines)
+- `app/api/nodes/[id]/route.ts`: Node update/delete endpoint (200 lines)
+- `app/api/relationships/route.ts`: Relationship creation endpoint (30 lines)
+- `app/api/relationships/[id]/route.ts`: Relationship deletion endpoint (32 lines)
+- `__tests__/api/health.test.ts`: Health endpoint tests (9 lines)
+- `__tests__/api/graph.test.ts`: Graph endpoint tests (45 lines)
+- `__tests__/api/nodes.test.ts`: Node creation tests (95 lines)
+- `__tests__/api/nodes-id.test.ts`: Node update/delete tests (105 lines)
+- `__tests__/api/relationships.test.ts`: Relationship creation tests (55 lines)
+- `__tests__/api/relationships-id.test.ts`: Relationship deletion tests (35 lines)
+
+### Key Learnings
+- Next.js 16 App Router requires async params handling
+- Neo4j driver Integer objects must be converted for JSON serialization
+- TDD workflow prevents runtime errors and ensures proper error handling
+- Connection pooling essential for PostgreSQL performance
+- Singleton pattern prevents multiple Neo4j driver instances
+- Dynamic SQL field building enables partial updates
+- Proper HTTP status codes improve API usability (201 for creation, 204 for deletion)

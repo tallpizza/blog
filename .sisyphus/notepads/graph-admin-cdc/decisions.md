@@ -152,3 +152,61 @@ grep -i "선택:" docs/graph-library-evaluation.md
 # Expected: "@neo4j-nvl/react"
 ```
 
+
+## Task 8: API Architecture Decisions
+
+### Database Client Libraries
+- **Decision**: Use `pg` library directly instead of Prisma
+- **Rationale**: 
+  - Simpler setup without schema generation
+  - Direct SQL control for dynamic queries
+  - Lighter weight for API routes
+  - Better alignment with existing PostgreSQL schema
+
+### Connection Management
+- **Decision**: Singleton pattern for Neo4j driver, connection pool for PostgreSQL
+- **Rationale**:
+  - Neo4j driver is expensive to create (authentication, connection setup)
+  - PostgreSQL pool handles concurrent requests efficiently
+  - Prevents connection exhaustion under load
+  - Follows official driver recommendations
+
+### API Response Format
+- **Decision**: Return database rows directly with minimal transformation
+- **Rationale**:
+  - Simpler implementation
+  - Matches PostgreSQL column names
+  - Frontend can handle data transformation
+  - Reduces API layer complexity
+
+### Node Type Handling
+- **Decision**: Use `type` field in request body to determine table
+- **Rationale**:
+  - Single endpoint for all node types
+  - Easier to extend with new node types
+  - Consistent API interface
+  - Validation happens at API layer
+
+### Relationship Modeling
+- **Decision**: Use order_items table for relationships (not separate relationship endpoint per type)
+- **Rationale**:
+  - Aligns with E-commerce schema design
+  - Foreign keys enforce referential integrity
+  - CDC connector handles Neo4j relationship creation
+  - Simpler than managing multiple relationship types
+
+### Error Handling Strategy
+- **Decision**: Return JSON error objects with descriptive messages
+- **Rationale**:
+  - Consistent error format across all endpoints
+  - Helpful for debugging and frontend error display
+  - Proper HTTP status codes (400, 404, 500)
+  - Logs errors server-side for monitoring
+
+### Test Strategy
+- **Decision**: TDD with Vitest for unit/integration tests
+- **Rationale**:
+  - Tests written before implementation (RED-GREEN-REFACTOR)
+  - Fast feedback loop with Vitest
+  - Integration tests hit real database (not mocked)
+  - Ensures endpoints work end-to-end
