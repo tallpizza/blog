@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Relationship } from '../types';
 import { BottomSheet } from './BottomSheet';
+import { api } from '@/lib/api-client';
 
 interface Props {
   relationship: Relationship;
@@ -40,15 +41,7 @@ export function RelationshipDetailPanel({
     setSaving(true);
     setError(null);
     try {
-      const response = await fetch(`/api/relationships/${encodeURIComponent(relationship.id)}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ properties: editedProperties }),
-      });
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || 'Failed to update relationship');
-      }
+      await api.updateRelationship(relationship.id, editedProperties);
       setIsEditing(false);
       onUpdate?.();
     } catch (err) {

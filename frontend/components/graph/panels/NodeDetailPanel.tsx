@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Node } from '../types';
 import { LABEL_COLORS } from '../constants';
 import { BottomSheet } from './BottomSheet';
+import { api } from '@/lib/api-client';
 
 const AVAILABLE_LABELS = ['Product', 'Category', 'Customer', 'Order'];
 
@@ -38,20 +39,12 @@ export function NodeDetailPanel({ node, onClose, onUpdate, onDelete, isMobile }:
     setSaving(true);
     setError(null);
     try {
-      const body: any = { ...editedProperties };
+      const updateData: Record<string, unknown> = { ...editedProperties };
       if (newLabel) {
-        body.addLabel = newLabel;
+        updateData.addLabel = newLabel;
       }
       
-      const response = await fetch(`/api/nodes/${encodeURIComponent(node.id)}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || 'Failed to update node');
-      }
+      await api.updateNode(node.id, updateData);
       setIsEditing(false);
       setNewLabel('');
       onUpdate?.();
@@ -68,13 +61,7 @@ export function NodeDetailPanel({ node, onClose, onUpdate, onDelete, isMobile }:
     setDeleting(true);
     setError(null);
     try {
-      const response = await fetch(`/api/nodes/${encodeURIComponent(node.id)}`, {
-        method: 'DELETE',
-      });
-      if (!response.ok && response.status !== 204) {
-        const data = await response.json();
-        throw new Error(data.error || 'Failed to delete node');
-      }
+      await api.deleteNode(node.id);
       onDelete?.();
       onClose();
     } catch (err) {

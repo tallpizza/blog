@@ -10,6 +10,7 @@ import { NodeDetailPanel, RelationshipDetailPanel, SearchPanel, UndoRedoButtons 
 import { useRingLinkCreation, useGraphRendering, useUndoRedo } from './hooks';
 import { getNodeCaption, getNodeColor } from './utils';
 import NodePanel from '@/components/nodes/NodePanel';
+import { api } from '@/lib/api-client';
 
 const ForceGraph2D = dynamic(() => import('react-force-graph-2d'), { ssr: false });
 const ForceGraph3D = dynamic(() => import('react-force-graph-3d'), { ssr: false });
@@ -45,9 +46,7 @@ export default function GraphViewer() {
 
   const fetchGraphData = useCallback(async () => {
     try {
-      const response = await fetch('/api/graph');
-      if (!response.ok) throw new Error('Failed to fetch graph data');
-      const data = await response.json();
+      const data = await api.getGraph();
       setGraphData(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
@@ -103,22 +102,11 @@ export default function GraphViewer() {
 
   const handleInstantLinkCreate = useCallback(async (link: PendingLink) => {
     try {
-      const res = await fetch('/api/relationships', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          startNodeId: link.fromNodeId,
-          endNodeId: link.toNodeId,
-          type: 'RELATES_TO',
-        }),
+      const relData = await api.createRelationship({
+        startNodeId: link.fromNodeId,
+        endNodeId: link.toNodeId,
+        type: 'RELATES_TO',
       });
-      
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || 'Failed to create relationship');
-      }
-      
-      const relData = await res.json();
       
       const newRel: Relationship = {
         id: relData.id,
@@ -201,28 +189,26 @@ export default function GraphViewer() {
     if (!selectedRel) return;
     setDeleting(true);
     try {
-      const res = await fetch(`/api/relationships/${encodeURIComponent(selectedRel.id)}`, { method: 'DELETE' });
-      if (res.ok || res.status === 204) {
-        setGraphData(prev => {
-          if (!prev) return prev;
-          return {
-            ...prev,
-            relationships: prev.relationships.filter(r => r.id !== selectedRel.id),
-          };
-        });
-        
-        pushCommand({
-          type: 'DELETE_RELATIONSHIP',
-          data: { relId: selectedRel.id },
-          reverseData: {
-            startNodeId: selectedRel.startNode,
-            endNodeId: selectedRel.endNode,
-            type: selectedRel.type,
-            properties: selectedRel.properties,
-          },
-        });
-        setSelectedRel(null);
-      }
+      await api.deleteRelationship(selectedRel.id);
+      setGraphData(prev => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          relationships: prev.relationships.filter(r => r.id !== selectedRel.id),
+        };
+      });
+      
+      pushCommand({
+        type: 'DELETE_RELATIONSHIP',
+        data: { relId: selectedRel.id },
+        reverseData: {
+          startNodeId: selectedRel.startNode,
+          endNodeId: selectedRel.endNode,
+          type: selectedRel.type,
+          properties: selectedRel.properties,
+        },
+      });
+      setSelectedRel(null);
     } finally {
       setDeleting(false);
     }

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { api } from '@/lib/api-client';
 
 interface RelationshipFormData {
   order_id: number;
@@ -39,10 +40,7 @@ export default function RelationshipPanel() {
 
   const { data: graphData } = useQuery<GraphData>({
     queryKey: ['graph'],
-    queryFn: async () => {
-      const res = await fetch('/api/graph');
-      return res.json();
-    },
+    queryFn: () => api.getGraph(),
   });
 
   const orders = graphData?.nodes.filter(n => n.labels.includes('Order')) || [];
@@ -50,16 +48,12 @@ export default function RelationshipPanel() {
 
   const createRelMutation = useMutation({
     mutationFn: async (data: RelationshipFormData) => {
-      const response = await fetch('/api/relationships', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
+      return api.createRelationship({
+        startNodeId: String(data.order_id),
+        endNodeId: String(data.product_id),
+        type: 'CONTAINS',
+        properties: { quantity: data.quantity, price: data.price },
       });
-      if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.error || 'Failed to create relationship');
-      }
-      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['graph'] });

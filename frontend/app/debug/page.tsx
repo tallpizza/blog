@@ -6,9 +6,13 @@ export default function DebugPage() {
   const [graphData, setGraphData] = useState(null);
   
   useEffect(() => {
-    fetch('/api/graph')
+    fetch('/api/cypher', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ queryId: 'getGraph' }),
+    })
       .then(res => res.json())
-      .then(data => setGraphData(data))
+      .then(data => setGraphData(data.data))
       .catch(err => console.error(err));
   }, []);
   

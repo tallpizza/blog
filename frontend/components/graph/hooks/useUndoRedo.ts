@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
+import { api } from '@/lib/api-client';
 
 export type CommandType = 
   | 'CREATE_NODE'
@@ -54,53 +55,38 @@ export function useUndoRedo(): UseUndoRedoReturn {
     try {
       switch (type) {
         case 'CREATE_NODE': {
-          const res = await fetch(`/api/nodes/${encodeURIComponent(data.nodeId as string)}`, {
-            method: 'DELETE',
-          });
-          return res.ok || res.status === 204;
+          await api.deleteNode(data.nodeId as string);
+          return true;
         }
         
         case 'DELETE_NODE': {
-          const res = await fetch('/api/nodes', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(reverseData),
-          });
-          return res.ok;
+          await api.createNode(reverseData as { type?: string; [key: string]: unknown });
+          return true;
         }
         
         case 'UPDATE_NODE': {
-          const res = await fetch(`/api/nodes/${encodeURIComponent(data.nodeId as string)}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(reverseData.properties),
-          });
-          return res.ok;
+          await api.updateNode(data.nodeId as string, reverseData.properties as Record<string, unknown>);
+          return true;
         }
         
         case 'CREATE_RELATIONSHIP': {
-          const res = await fetch(`/api/relationships/${encodeURIComponent(data.relId as string)}`, {
-            method: 'DELETE',
-          });
-          return res.ok || res.status === 204;
+          await api.deleteRelationship(data.relId as string);
+          return true;
         }
         
         case 'DELETE_RELATIONSHIP': {
-          const res = await fetch('/api/relationships', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(reverseData),
+          await api.createRelationship(reverseData as {
+            startNodeId: string;
+            endNodeId: string;
+            type: string;
+            properties?: Record<string, unknown>;
           });
-          return res.ok;
+          return true;
         }
         
         case 'UPDATE_RELATIONSHIP': {
-          const res = await fetch(`/api/relationships/${encodeURIComponent(data.relId as string)}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ properties: reverseData.properties }),
-          });
-          return res.ok;
+          await api.updateRelationship(data.relId as string, reverseData.properties as Record<string, unknown>);
+          return true;
         }
         
         default:
@@ -117,53 +103,38 @@ export function useUndoRedo(): UseUndoRedoReturn {
     try {
       switch (type) {
         case 'CREATE_NODE': {
-          const res = await fetch('/api/nodes', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data.nodeData),
-          });
-          return res.ok;
+          await api.createNode(data.nodeData as { type?: string; [key: string]: unknown });
+          return true;
         }
         
         case 'DELETE_NODE': {
-          const res = await fetch(`/api/nodes/${encodeURIComponent(data.nodeId as string)}`, {
-            method: 'DELETE',
-          });
-          return res.ok || res.status === 204;
+          await api.deleteNode(data.nodeId as string);
+          return true;
         }
         
         case 'UPDATE_NODE': {
-          const res = await fetch(`/api/nodes/${encodeURIComponent(data.nodeId as string)}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data.properties),
-          });
-          return res.ok;
+          await api.updateNode(data.nodeId as string, data.properties as Record<string, unknown>);
+          return true;
         }
         
         case 'CREATE_RELATIONSHIP': {
-          const res = await fetch('/api/relationships', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data.relData),
+          await api.createRelationship(data.relData as {
+            startNodeId: string;
+            endNodeId: string;
+            type: string;
+            properties?: Record<string, unknown>;
           });
-          return res.ok;
+          return true;
         }
         
         case 'DELETE_RELATIONSHIP': {
-          const res = await fetch(`/api/relationships/${encodeURIComponent(data.relId as string)}`, {
-            method: 'DELETE',
-          });
-          return res.ok || res.status === 204;
+          await api.deleteRelationship(data.relId as string);
+          return true;
         }
         
         case 'UPDATE_RELATIONSHIP': {
-          const res = await fetch(`/api/relationships/${encodeURIComponent(data.relId as string)}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ properties: data.properties }),
-          });
-          return res.ok;
+          await api.updateRelationship(data.relId as string, data.properties as Record<string, unknown>);
+          return true;
         }
         
         default:

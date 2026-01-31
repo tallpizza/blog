@@ -2,6 +2,7 @@
 
 import { useMutation } from '@tanstack/react-query';
 import { Node } from '@/components/graph/types';
+import { api } from '@/lib/api-client';
 
 interface NodePanelProps {
   onNodeCreated?: (node: Node) => void;
@@ -9,17 +10,9 @@ interface NodePanelProps {
 
 export default function NodePanel({ onNodeCreated }: NodePanelProps) {
   const createNodeMutation = useMutation({
-    mutationFn: async () => {
-      const response = await fetch('/api/nodes', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: 'New Node' }),
-      });
-      if (!response.ok) throw new Error('Failed to create node');
-      return response.json();
-    },
+    mutationFn: () => api.createNode({ name: 'New Node' }),
     onSuccess: (data) => {
-      onNodeCreated?.(data);
+      onNodeCreated?.(data as Node);
     },
   });
 
