@@ -26,15 +26,15 @@ export async function GET() {
       OPTIONAL MATCH (n)-[r]->(m)
       RETURN 
         collect(DISTINCT {
-          id: id(n),
+          id: elementId(n),
           labels: labels(n),
           properties: properties(n)
         }) as nodes,
         collect(DISTINCT {
-          id: id(r),
+          id: elementId(r),
           type: type(r),
-          startNode: id(startNode(r)),
-          endNode: id(endNode(r)),
+          startNode: elementId(startNode(r)),
+          endNode: elementId(endNode(r)),
           properties: properties(r)
         }) as relationships
     `);

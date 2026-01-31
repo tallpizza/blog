@@ -8,6 +8,7 @@ interface UseGraphRenderingProps {
   dragLink: DragLink | null;
   ringHovered: boolean;
   links: ForceGraphLink[];
+  highlightedNodeIds?: Set<string>;
 }
 
 export function useGraphRendering({
@@ -16,6 +17,7 @@ export function useGraphRendering({
   dragLink,
   ringHovered,
   links,
+  highlightedNodeIds = new Set(),
 }: UseGraphRenderingProps) {
   const connectedNodeIds = useMemo(() => {
     if (!hoveredNode) return new Set<string>();
@@ -41,7 +43,9 @@ export function useGraphRendering({
     const isConnected = connectedNodeIds.has(node.id);
     const isHovered = hoveredNode?.id === node.id;
     const isDragSource = dragLink?.sourceNode?.id === node.id;
-    const isSelected = selectedNode?.id === Number(node.id);
+    const isSelected = selectedNode?.id === node.id;
+    const isHighlighted = highlightedNodeIds.size > 0 && highlightedNodeIds.has(node.id);
+    const isDimmed = highlightedNodeIds.size > 0 && !highlightedNodeIds.has(node.id);
     
     if (isHovered && !isDragSource) {
       ctx.beginPath();
@@ -60,10 +64,16 @@ export function useGraphRendering({
     
     ctx.beginPath();
     ctx.arc(node.x, node.y, nodeRadius, 0, 2 * Math.PI);
-    ctx.fillStyle = isDragSource ? '#22c55e' : 
-                    isHovered || isSelected ? '#ffffff' : 
-                    isConnected ? node.color : node.color;
+    
+    let fillColor = node.color;
+    if (isDragSource) fillColor = '#22c55e';
+    else if (isHovered || isSelected) fillColor = '#ffffff';
+    else if (isDimmed) fillColor = '#374151';
+    
+    ctx.fillStyle = fillColor;
+    ctx.globalAlpha = isDimmed ? 0.4 : 1;
     ctx.fill();
+    ctx.globalAlpha = 1;
     
     if (isSelected) {
       ctx.strokeStyle = '#3B82F6';
@@ -71,11 +81,19 @@ export function useGraphRendering({
       ctx.stroke();
     }
     
+    if (isHighlighted && !isHovered && !isSelected) {
+      ctx.strokeStyle = '#fbbf24';
+      ctx.lineWidth = 2 / globalScale;
+      ctx.stroke();
+    }
+    
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
+    ctx.globalAlpha = isDimmed ? 0.4 : 1;
     ctx.fillStyle = isHovered || isSelected || isDragSource ? '#000' : '#fff';
     ctx.fillText(label, node.x, node.y);
-  }, [connectedNodeIds, hoveredNode, dragLink, selectedNode, ringHovered]);
+    ctx.globalAlpha = 1;
+  }, [connectedNodeIds, hoveredNode, dragLink, selectedNode, ringHovered, highlightedNodeIds]);
 
   const nodeColor = useCallback((node: any) => {
     const isDragSource = dragLink?.sourceNode?.id === node.id;

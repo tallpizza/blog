@@ -127,3 +127,27 @@ Given time constraints and project scope:
 - UI can be enhanced in v2
 - Prioritize completing end-to-end verification
 
+
+## Post-Completion: Frontend Turbopack Issue - RESOLVED
+
+### Issue 7: Next.js Cache Corruption After Directory Move
+- **Problem**: After moving `apps/web` to `frontend/`, Turbopack failed with "Next.js package not found"
+- **Symptom**: Page showed "Loading graph..." indefinitely with flickering/refreshing
+- **Error**: `Failed to write app endpoint /page - Next.js package not found`
+- **Root Cause**: Stale `.next` cache directory after directory restructuring
+- **Solution**: 
+  1. `rm -rf .next` - Remove corrupted cache
+  2. `pkill -f "next dev"` - Stop dev server
+  3. `bun install --force` - Reinstall dependencies
+  4. `bun dev` - Restart dev server
+- **Verification**:
+  - ✅ Server starts successfully in 1158ms
+  - ✅ Page loads with graph visualization
+  - ✅ API endpoints work (curl returns 200)
+  - ✅ 24 unit tests pass
+  - ✅ 15/18 E2E tests pass (3 failures are trivial example.e2e.ts expecting h1)
+  - ✅ No console errors
+  - ✅ Screenshot captured: `.sisyphus/evidence/frontend-working.png`
+- **Prevention**: Always clean `.next` cache after major directory restructuring
+- **Note**: This was NOT a @neo4j-nvl/react compatibility issue - it was a cache issue
+

@@ -1,58 +1,80 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { getPostgresPool } from '@/lib/postgres';
+import { getNeo4jDriver } from '@/lib/neo4j';
 
-let testProductId: number;
+let testProductId: string;
 
 describe('PUT /api/nodes/:id', () => {
   beforeAll(async () => {
-    const pool = getPostgresPool();
-    const result = await pool.query(
-      'INSERT INTO products (name, price, category_id) VALUES ($1, $2, $3) RETURNING id',
-      ['Test Product for Update', 50.00, 1]
-    );
-    testProductId = result.rows[0].id;
+    const driver = getNeo4jDriver();
+    const session = driver.session();
+    try {
+      const result = await session.run(
+        'CREATE (p:Product {name: $name, price: $price}) RETURN elementId(p) as id',
+        { name: 'Test Product for Update', price: 50.00 }
+      );
+      testProductId = result.records[0].get('id');
+    } finally {
+      await session.close();
+    }
   });
 
   afterAll(async () => {
     if (testProductId) {
-      const pool = getPostgresPool();
-      await pool.query('DELETE FROM products WHERE id = $1', [testProductId]);
+      const driver = getNeo4jDriver();
+      const session = driver.session();
+      try {
+        await session.run('MATCH (n) WHERE elementId(n) = $id DETACH DELETE n', { id: testProductId });
+      } finally {
+        await session.close();
+      }
     }
   });
 
-  it('returns 400 when type is missing', async () => {
-    const res = await fetch(`http://localhost:3000/api/nodes/${testProductId}`, {
+  it('returns 400 when no fields to update', async () => {
+    const res = await fetch(`http://localhost:3000/api/nodes/${encodeURIComponent(testProductId)}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: 'Updated' }),
+      body: JSON.stringify({}),
     });
     expect(res.status).toBe(400);
     const data = await res.json();
     expect(data).toHaveProperty('error');
   });
 
-  it('updates a Product node successfully', async () => {
-    const res = await fetch(`http://localhost:3000/api/nodes/${testProductId}`, {
+  it('updates a node successfully', async () => {
+    const res = await fetch(`http://localhost:3000/api/nodes/${encodeURIComponent(testProductId)}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        type: 'Product',
         name: 'Updated Product Name',
         price: 75.50,
       }),
     });
     expect(res.status).toBe(200);
     const data = await res.json();
-    expect(data.name).toBe('Updated Product Name');
-    expect(data.price).toBe('75.50');
+    expect(data.properties.name).toBe('Updated Product Name');
+    expect(data.properties.price).toBe(75.50);
   });
 
-  it('returns 404 when node does not exist', async () => {
-    const res = await fetch('http://localhost:3000/api/nodes/999999', {
+  it('adds a label to node', async () => {
+    const res = await fetch(`http://localhost:3000/api/nodes/${encodeURIComponent(testProductId)}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        type: 'Product',
+        addLabel: 'Featured',
+      }),
+    });
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.labels).toContain('Featured');
+  });
+
+  it('returns 404 when node does not exist', async () => {
+    const fakeId = '4:xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx:999999999';
+    const res = await fetch(`http://localhost:3000/api/nodes/${encodeURIComponent(fakeId)}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
         name: 'Non-existent',
         price: 100,
       }),
@@ -64,39 +86,41 @@ describe('PUT /api/nodes/:id', () => {
 });
 
 describe('DELETE /api/nodes/:id', () => {
-  let deleteTestId: number;
+  let deleteTestId: string;
 
   beforeAll(async () => {
-    const pool = getPostgresPool();
-    const result = await pool.query(
-      'INSERT INTO products (name, price, category_id) VALUES ($1, $2, $3) RETURNING id',
-      ['Test Product for Delete', 25.00, 1]
-    );
-    deleteTestId = result.rows[0].id;
+    const driver = getNeo4jDriver();
+    const session = driver.session();
+    try {
+      const result = await session.run(
+        'CREATE (p:Product {name: $name, price: $price}) RETURN elementId(p) as id',
+        { name: 'Test Product for Delete', price: 25.00 }
+      );
+      deleteTestId = result.records[0].get('id');
+    } finally {
+      await session.close();
+    }
   });
 
-  it('returns 400 when type is missing', async () => {
-    const res = await fetch(`http://localhost:3000/api/nodes/${deleteTestId}`, {
-      method: 'DELETE',
-    });
-    expect(res.status).toBe(400);
-    const data = await res.json();
-    expect(data).toHaveProperty('error');
-  });
-
-  it('deletes a Product node successfully', async () => {
-    const res = await fetch(`http://localhost:3000/api/nodes/${deleteTestId}?type=Product`, {
+  it('deletes a node successfully', async () => {
+    const res = await fetch(`http://localhost:3000/api/nodes/${encodeURIComponent(deleteTestId)}`, {
       method: 'DELETE',
     });
     expect(res.status).toBe(204);
 
-    const pool = getPostgresPool();
-    const result = await pool.query('SELECT * FROM products WHERE id = $1', [deleteTestId]);
-    expect(result.rows.length).toBe(0);
+    const driver = getNeo4jDriver();
+    const session = driver.session();
+    try {
+      const result = await session.run('MATCH (n) WHERE elementId(n) = $id RETURN n', { id: deleteTestId });
+      expect(result.records.length).toBe(0);
+    } finally {
+      await session.close();
+    }
   });
 
   it('returns 404 when node does not exist', async () => {
-    const res = await fetch('http://localhost:3000/api/nodes/999999?type=Product', {
+    const fakeId = '4:xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx:999999999';
+    const res = await fetch(`http://localhost:3000/api/nodes/${encodeURIComponent(fakeId)}`, {
       method: 'DELETE',
     });
     expect(res.status).toBe(404);

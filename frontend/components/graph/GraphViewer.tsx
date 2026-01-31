@@ -4,11 +4,12 @@ import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 
 import { GraphData, Node, Relationship, PendingLink, ForceGraphData } from './types';
-import { GRAPH_BACKGROUND, NODE_RADIUS } from './constants';
+import { GRAPH_BACKGROUND } from './constants';
 import { Graph3DErrorBoundary } from './Graph3DErrorBoundary';
-import { NodeDetailPanel, RelationshipDetailPanel, CreateLinkPanel } from './panels';
-import { useRingLinkCreation, useGraphRendering } from './hooks';
-import { getNodeCaption, getNodeLabel, getNodeColor } from './utils';
+import { NodeDetailPanel, RelationshipDetailPanel, SearchPanel, UndoRedoButtons } from './panels';
+import { useRingLinkCreation, useGraphRendering, useUndoRedo } from './hooks';
+import { getNodeCaption, getNodeColor } from './utils';
+import NodePanel from '@/components/nodes/NodePanel';
 
 const ForceGraph2D = dynamic(() => import('react-force-graph-2d'), { ssr: false });
 const ForceGraph3D = dynamic(() => import('react-force-graph-3d'), { ssr: false });
@@ -23,13 +24,23 @@ export default function GraphViewer() {
   
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
   const [selectedRel, setSelectedRel] = useState<Relationship | null>(null);
-  const [pendingLink, setPendingLink] = useState<PendingLink | null>(null);
   const [hoveredNode, setHoveredNode] = useState<any>(null);
   
   const [deleting, setDeleting] = useState(false);
-  const [creating, setCreating] = useState(false);
   const [is3D, setIs3D] = useState(false);
   const [is3DSupported, setIs3DSupported] = useState(true);
+  const [isMobile, setIsMobile] = useState(false);
+  const [highlightedNodeIds, setHighlightedNodeIds] = useState<Set<string>>(new Set());
+  const [isUndoRedoProcessing, setIsUndoRedoProcessing] = useState(false);
+  
+  const { canUndo, canRedo, pushCommand, undo, redo } = useUndoRedo();
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   const fetchGraphData = useCallback(async () => {
     try {
@@ -82,12 +93,72 @@ export default function GraphViewer() {
     };
   }, [forceGraphData]);
 
-  const { dragLink, ringHovered, isDraggingLinkRef, clearDragLink } = useRingLinkCreation({
+  useEffect(() => {
+    if (fgRef.current) {
+      fgRef.current.d3Force('charge')?.strength(-100);
+      fgRef.current.d3Force('link')?.distance(80);
+    }
+  }, [forceGraphData]);
+
+  const handleInstantLinkCreate = useCallback(async (link: PendingLink) => {
+    try {
+      const res = await fetch('/api/relationships', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          startNodeId: link.fromNodeId,
+          endNodeId: link.toNodeId,
+          type: 'RELATES_TO',
+        }),
+      });
+      
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Failed to create relationship');
+      }
+      
+      const relData = await res.json();
+      
+      pushCommand({
+        type: 'CREATE_RELATIONSHIP',
+        data: { 
+          relId: relData.id,
+          relData: {
+            startNodeId: link.fromNodeId,
+            endNodeId: link.toNodeId,
+            type: 'RELATES_TO',
+          }
+        },
+        reverseData: {
+          startNodeId: link.fromNodeId,
+          endNodeId: link.toNodeId,
+          type: 'RELATES_TO',
+        },
+      });
+      
+      await fetchGraphData();
+      
+      if (relData.id) {
+        const newRel = {
+          id: relData.id,
+          type: 'RELATES_TO',
+          startNode: link.fromNodeId,
+          endNode: link.toNodeId,
+          properties: {},
+        };
+        setSelectedRel(newRel);
+      }
+    } catch (err) {
+      console.error('Error creating link:', err);
+    }
+  }, [fetchGraphData, pushCommand]);
+
+  const { dragLink, ringHovered, clearDragLink } = useRingLinkCreation({
     containerRef,
     fgRef,
     nodes: forceGraphData.nodes,
     is3D,
-    onPendingLink: setPendingLink,
+    onPendingLink: handleInstantLinkCreate,
   });
 
   const {
@@ -103,78 +174,100 @@ export default function GraphViewer() {
     dragLink,
     ringHovered,
     links: forceGraphData.links,
+    highlightedNodeIds,
   });
 
   const handleNodeClick = useCallback((node: any) => {
     if (dragLink) return;
     setSelectedRel(null);
-    setPendingLink(null);
     setSelectedNode(node.originalNode);
   }, [dragLink]);
 
   const handleLinkClick = useCallback((link: any) => {
     if (dragLink) return;
     setSelectedNode(null);
-    setPendingLink(null);
     setSelectedRel(link.originalRel);
   }, [dragLink]);
-
-  const handleCreateLink = useCallback(async () => {
-    if (!pendingLink || !graphData) return;
-    
-    const fromNode = graphData.nodes.find(n => String(n.id) === pendingLink.fromNodeId);
-    const toNode = graphData.nodes.find(n => String(n.id) === pendingLink.toNodeId);
-    
-    if (!fromNode || !toNode) return;
-
-    const fromLabel = fromNode.labels[0];
-    const toLabel = toNode.labels[0];
-    
-    setCreating(true);
-    try {
-      if (fromLabel === 'Order' && toLabel === 'Product') {
-        await fetch('/api/relationships', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            order_id: fromNode.properties.id,
-            product_id: toNode.properties.id,
-            quantity: 1,
-            price: (toNode.properties.price as number) || 10,
-          }),
-        });
-      } else if (fromLabel === 'Product' && toLabel === 'Order') {
-        await fetch('/api/relationships', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            order_id: toNode.properties.id,
-            product_id: fromNode.properties.id,
-            quantity: 1,
-            price: (fromNode.properties.price as number) || 10,
-          }),
-        });
-      }
-      setPendingLink(null);
-      await fetchGraphData();
-    } finally {
-      setCreating(false);
-    }
-  }, [pendingLink, graphData, fetchGraphData]);
 
   const handleDeleteRel = useCallback(async () => {
     if (!selectedRel) return;
     setDeleting(true);
     try {
-      const res = await fetch(`/api/relationships/${selectedRel.id}`, { method: 'DELETE' });
-      if (res.ok) {
+      const res = await fetch(`/api/relationships/${encodeURIComponent(selectedRel.id)}`, { method: 'DELETE' });
+      if (res.ok || res.status === 204) {
+        pushCommand({
+          type: 'DELETE_RELATIONSHIP',
+          data: { relId: selectedRel.id },
+          reverseData: {
+            startNodeId: selectedRel.startNode,
+            endNodeId: selectedRel.endNode,
+            type: selectedRel.type,
+            properties: selectedRel.properties,
+          },
+        });
         setSelectedRel(null);
         await fetchGraphData();
       }
     } finally {
       setDeleting(false);
     }
-  }, [selectedRel, fetchGraphData]);
+  }, [selectedRel, fetchGraphData, pushCommand]);
+
+  const handleNodeCreated = useCallback((nodeId: string) => {
+    fetchGraphData().then(() => {
+      const newNode = graphData?.nodes.find(n => n.id === nodeId);
+      if (newNode) {
+        setSelectedNode(newNode);
+      }
+    });
+  }, [fetchGraphData, graphData]);
+
+  const handleBackgroundClick = useCallback(() => {
+    setSelectedNode(null);
+    setSelectedRel(null);
+  }, []);
+
+  const handleSearchSelect = useCallback((nodeId: string) => {
+    const node = graphData?.nodes.find(n => n.id === nodeId);
+    if (node) {
+      setSelectedNode(node);
+      setSelectedRel(null);
+      
+      const graphNode = forceGraphData.nodes.find(n => n.id === nodeId);
+      if (graphNode && graphNode.x !== undefined && graphNode.y !== undefined && fgRef.current) {
+        fgRef.current.centerAt(graphNode.x, graphNode.y, 500);
+        fgRef.current.zoom(2, 500);
+      }
+    }
+  }, [graphData, forceGraphData.nodes]);
+
+  const handleHighlightChange = useCallback((nodeIds: Set<string>) => {
+    setHighlightedNodeIds(nodeIds);
+  }, []);
+
+  const handleUndo = useCallback(async () => {
+    setIsUndoRedoProcessing(true);
+    try {
+      await undo();
+      await fetchGraphData();
+      setSelectedNode(null);
+      setSelectedRel(null);
+    } finally {
+      setIsUndoRedoProcessing(false);
+    }
+  }, [undo, fetchGraphData]);
+
+  const handleRedo = useCallback(async () => {
+    setIsUndoRedoProcessing(true);
+    try {
+      await redo();
+      await fetchGraphData();
+      setSelectedNode(null);
+      setSelectedRel(null);
+    } finally {
+      setIsUndoRedoProcessing(false);
+    }
+  }, [redo, fetchGraphData]);
 
   if (loading) {
     return (
@@ -192,16 +285,8 @@ export default function GraphViewer() {
     );
   }
 
-  if (!graphData || graphData.nodes.length === 0) {
-    return (
-      <div className="flex items-center justify-center h-screen bg-gray-950">
-        <div className="text-gray-400">No graph data available</div>
-      </div>
-    );
-  }
-
   return (
-    <div className="flex h-screen bg-gray-950">
+    <div className="flex h-screen w-screen overflow-hidden bg-gray-950">
       <div 
         ref={containerRef}
         className="flex-1 relative"
@@ -211,7 +296,8 @@ export default function GraphViewer() {
           touchAction: 'none',
         }}
       >
-        <div className="absolute top-4 left-4 z-10 flex gap-2">
+        <div className="absolute top-4 left-4 z-10 flex gap-2 items-center">
+          <NodePanel onNodeCreated={handleNodeCreated} />
           <button
             onClick={() => is3DSupported && setIs3D(!is3D)}
             disabled={!is3DSupported}
@@ -226,7 +312,22 @@ export default function GraphViewer() {
           >
             {is3D ? '3D' : '2D'}{!is3DSupported && ' (N/A)'}
           </button>
+          <UndoRedoButtons
+            canUndo={canUndo}
+            canRedo={canRedo}
+            onUndo={handleUndo}
+            onRedo={handleRedo}
+            isProcessing={isUndoRedoProcessing}
+          />
         </div>
+
+        {!isMobile && (
+          <SearchPanel
+            nodes={forceGraphData.nodes}
+            onNodeSelect={handleSearchSelect}
+            onHighlightChange={handleHighlightChange}
+          />
+        )}
 
         {dragLink && (
           <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 px-4 py-2 bg-green-900/90 rounded text-sm text-white">
@@ -234,13 +335,15 @@ export default function GraphViewer() {
           </div>
         )}
 
-        <div className="absolute bottom-4 left-4 z-10 p-3 bg-gray-900/90 rounded text-xs text-gray-300 max-w-xs">
-          <div className="font-semibold mb-1">Controls</div>
-          <div>Click node: View details</div>
-          <div>Drag node center: Move node</div>
-          {!is3D && <div className="text-green-400">Drag from ring: Create link</div>}
-          {is3D && <div className="text-yellow-400 mt-1">Drag to rotate, scroll to zoom</div>}
-        </div>
+        {!isMobile && (
+          <div className="absolute bottom-4 left-4 z-10 p-3 bg-gray-900/90 rounded text-xs text-gray-300 max-w-xs">
+            <div className="font-semibold mb-1">Controls</div>
+            <div>Click node: View details</div>
+            <div>Drag node center: Move node</div>
+            {!is3D && <div className="text-green-400">Drag from ring: Create link</div>}
+            {is3D && <div className="text-yellow-400 mt-1">Drag to rotate, scroll to zoom</div>}
+          </div>
+        )}
 
         {is3D ? (
           <Graph3DErrorBoundary
@@ -274,6 +377,7 @@ export default function GraphViewer() {
               onNodeClick={handleNodeClick}
               onNodeHover={(node: any) => setHoveredNode(node)}
               onLinkClick={handleLinkClick}
+              onBackgroundClick={handleBackgroundClick}
               backgroundColor={GRAPH_BACKGROUND}
               showNavInfo={false}
             />
@@ -292,38 +396,37 @@ export default function GraphViewer() {
             onNodeClick={handleNodeClick}
             onNodeHover={(node: any) => setHoveredNode(node)}
             onLinkClick={handleLinkClick}
+            onBackgroundClick={handleBackgroundClick}
             onRenderFramePost={onRenderFramePost}
-            d3AlphaDecay={0.02}
-            d3VelocityDecay={0.3}
+            d3AlphaDecay={0.05}
+            d3VelocityDecay={0.4}
             cooldownTicks={100}
             backgroundColor={GRAPH_BACKGROUND}
           />
         )}
       </div>
 
-      {pendingLink && (
-        <CreateLinkPanel
-          fromLabel={getNodeLabel(graphData.nodes, pendingLink.fromNodeId)}
-          toLabel={getNodeLabel(graphData.nodes, pendingLink.toNodeId)}
-          onConfirm={handleCreateLink}
-          onCancel={() => setPendingLink(null)}
-          creating={creating}
-        />
-      )}
-
-      {selectedNode && !pendingLink && (
+      {selectedNode && (
         <NodeDetailPanel
           node={selectedNode}
           onClose={() => setSelectedNode(null)}
+          onUpdate={() => fetchGraphData()}
+          onDelete={() => {
+            setSelectedNode(null);
+            fetchGraphData();
+          }}
+          isMobile={isMobile}
         />
       )}
 
-      {selectedRel && !pendingLink && (
+      {selectedRel && (
         <RelationshipDetailPanel
           relationship={selectedRel}
           onClose={() => setSelectedRel(null)}
           onDelete={handleDeleteRel}
+          onUpdate={() => fetchGraphData()}
           deleting={deleting}
+          isMobile={isMobile}
         />
       )}
     </div>

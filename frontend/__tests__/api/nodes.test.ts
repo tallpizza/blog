@@ -1,39 +1,39 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { getPostgresPool } from '@/lib/postgres';
+import { describe, it, expect, afterAll } from 'vitest';
+import { getNeo4jDriver } from '@/lib/neo4j';
 
-let testProductId: number;
+let testNodeIds: string[] = [];
 
 describe('POST /api/nodes', () => {
   afterAll(async () => {
-    if (testProductId) {
-      const pool = getPostgresPool();
-      await pool.query('DELETE FROM products WHERE id = $1', [testProductId]);
+    if (testNodeIds.length > 0) {
+      const driver = getNeo4jDriver();
+      const session = driver.session();
+      try {
+        await session.run(
+          'MATCH (n) WHERE elementId(n) IN $ids DETACH DELETE n',
+          { ids: testNodeIds }
+        );
+      } finally {
+        await session.close();
+      }
     }
   });
 
-  it('returns 400 when type is missing', async () => {
+  it('creates a node without label', async () => {
     const res = await fetch('http://localhost:3000/api/nodes', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: 'Test' }),
+      body: JSON.stringify({ name: 'Test Node' }),
     });
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(201);
     const data = await res.json();
-    expect(data).toHaveProperty('error');
+    expect(data).toHaveProperty('id');
+    expect(data.labels).toEqual([]);
+    expect(data.properties.name).toBe('Test Node');
+    testNodeIds.push(data.id);
   });
 
-  it('returns 400 when required fields are missing', async () => {
-    const res = await fetch('http://localhost:3000/api/nodes', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type: 'Product' }),
-    });
-    expect(res.status).toBe(400);
-    const data = await res.json();
-    expect(data).toHaveProperty('error');
-  });
-
-  it('creates a Product node successfully', async () => {
+  it('creates a Product node with label', async () => {
     const res = await fetch('http://localhost:3000/api/nodes', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -41,15 +41,14 @@ describe('POST /api/nodes', () => {
         type: 'Product',
         name: 'API Test Product',
         price: 99.99,
-        category_id: 1,
       }),
     });
     expect(res.status).toBe(201);
     const data = await res.json();
     expect(data).toHaveProperty('id');
-    expect(data.name).toBe('API Test Product');
-    expect(data.price).toBe('99.99');
-    testProductId = data.id;
+    expect(data.labels).toContain('Product');
+    expect(data.properties.name).toBe('API Test Product');
+    testNodeIds.push(data.id);
   });
 
   it('creates a Category node successfully', async () => {
@@ -65,10 +64,9 @@ describe('POST /api/nodes', () => {
     expect(res.status).toBe(201);
     const data = await res.json();
     expect(data).toHaveProperty('id');
-    expect(data.description).toBe('Test description');
-
-    const pool = getPostgresPool();
-    await pool.query('DELETE FROM categories WHERE id = $1', [data.id]);
+    expect(data.labels).toContain('Category');
+    expect(data.properties.description).toBe('Test description');
+    testNodeIds.push(data.id);
   });
 
   it('creates a Customer node successfully', async () => {
@@ -85,9 +83,8 @@ describe('POST /api/nodes', () => {
     expect(res.status).toBe(201);
     const data = await res.json();
     expect(data).toHaveProperty('id');
-    expect(data.email).toBe(email);
-
-    const pool = getPostgresPool();
-    await pool.query('DELETE FROM customers WHERE id = $1', [data.id]);
+    expect(data.labels).toContain('Customer');
+    expect(data.properties.email).toBe(email);
+    testNodeIds.push(data.id);
   });
 });

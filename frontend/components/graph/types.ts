@@ -1,14 +1,14 @@
 export interface Node {
-  id: number;
+  id: string;
   labels: string[];
   properties: Record<string, unknown>;
 }
 
 export interface Relationship {
-  id: number;
+  id: string;
   type: string;
-  startNode: number;
-  endNode: number;
+  startNode: string;
+  endNode: string;
   properties: Record<string, unknown>;
 }
 

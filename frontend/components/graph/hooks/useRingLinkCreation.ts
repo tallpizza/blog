@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, RefObject } from 'react';
 import { DragLink, PendingLink, ForceGraphNode } from '../types';
-import { RING_INNER, RING_OUTER } from '../constants';
+import { RING_INNER, RING_OUTER, NODE_RADIUS } from '../constants';
 
 interface UseRingLinkCreationProps {
   containerRef: RefObject<HTMLDivElement | null>;
@@ -35,10 +35,12 @@ export function useRingLinkCreation({
     if (!container) return;
 
     const getGraphCoords = (clientX: number, clientY: number) => {
-      const rect = container.getBoundingClientRect();
-      const screenX = clientX - rect.left;
-      const screenY = clientY - rect.top;
-      return fgRef.current?.screen2GraphCoords(screenX, screenY) || { x: 0, y: 0 };
+      const canvas = container.querySelector('canvas');
+      if (!canvas) return { x: 0, y: 0 };
+      const rect = canvas.getBoundingClientRect();
+      const canvasX = clientX - rect.left;
+      const canvasY = clientY - rect.top;
+      return fgRef.current?.screen2GraphCoords(canvasX, canvasY) || { x: 0, y: 0 };
     };
 
     const findNodeAt = (graphX: number, graphY: number) => {
@@ -48,16 +50,27 @@ export function useRingLinkCreation({
         const dx = n.x - graphX;
         const dy = n.y - graphY;
         const dist = Math.sqrt(dx * dx + dy * dy);
-        if (dist < RING_OUTER) return { node, dist };
+        if (dist < NODE_RADIUS) return { node, dist };
       }
       return null;
     };
 
-    const isInRing = (dist: number) => {
-      const scale = fgRef.current?.zoom?.() || 1;
-      const scaledRingInner = RING_INNER / scale;
-      const scaledRingOuter = RING_OUTER / scale;
-      return dist >= scaledRingInner && dist <= scaledRingOuter;
+    const isInRing = (node: any, clientX: number, clientY: number) => {
+      const canvas = container.querySelector('canvas');
+      if (!canvas || !node.x || !node.y) return false;
+      
+      const nodeScreenCoords = fgRef.current?.graph2ScreenCoords(node.x, node.y);
+      if (!nodeScreenCoords) return false;
+      
+      const rect = canvas.getBoundingClientRect();
+      const nodeScreenX = rect.left + nodeScreenCoords.x;
+      const nodeScreenY = rect.top + nodeScreenCoords.y;
+      
+      const dx = clientX - nodeScreenX;
+      const dy = clientY - nodeScreenY;
+      const screenDist = Math.sqrt(dx * dx + dy * dy);
+      
+      return screenDist >= RING_INNER && screenDist <= RING_OUTER;
     };
 
     const handlePointerDown = (clientX: number, clientY: number, e: Event) => {
@@ -68,7 +81,7 @@ export function useRingLinkCreation({
       
       if (!found) return;
       
-      if (isInRing(found.dist)) {
+      if (isInRing(found.node, clientX, clientY)) {
         e.stopPropagation();
         e.preventDefault();
         isDraggingLinkRef.current = true;
@@ -145,7 +158,7 @@ export function useRingLinkCreation({
       const found = findNodeAt(graphX, graphY);
       
       if (found) {
-        setRingHovered(isInRing(found.dist));
+        setRingHovered(isInRing(found.node, e.clientX, e.clientY));
       } else {
         setRingHovered(false);
       }
