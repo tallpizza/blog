@@ -69,6 +69,19 @@ export default function GraphViewer() {
     };
   }, [graphData]);
 
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      (window as any).__FORCE_GRAPH_DATA__ = forceGraphData;
+      (window as any).__FORCE_GRAPH_INSTANCE__ = fgRef.current;
+    }
+    return () => {
+      if (typeof window !== 'undefined') {
+        delete (window as any).__FORCE_GRAPH_DATA__;
+        delete (window as any).__FORCE_GRAPH_INSTANCE__;
+      }
+    };
+  }, [forceGraphData]);
+
   const { dragLink, ringHovered, isDraggingLinkRef, clearDragLink } = useRingLinkCreation({
     containerRef,
     fgRef,
