@@ -1,11 +1,13 @@
 import { useCallback, useMemo } from 'react';
-import { DragLink, ForceGraphLink, Node } from '../types';
+import { DragLink, ForceGraphLink, ForceGraphNode, Node } from '../types';
 import { NODE_RADIUS, RING_INNER, RING_OUTER } from '../constants';
 
 interface UseGraphRenderingProps {
   hoveredNode: any;
+  hoveredLink: any;
   selectedNode: Node | null;
   dragLink: DragLink | null;
+  dragTargetNode: ForceGraphNode | null;
   ringHovered: boolean;
   links: ForceGraphLink[];
   highlightedNodeIds?: Set<string>;
@@ -13,8 +15,10 @@ interface UseGraphRenderingProps {
 
 export function useGraphRendering({
   hoveredNode,
+  hoveredLink,
   selectedNode,
   dragLink,
+  dragTargetNode,
   ringHovered,
   links,
   highlightedNodeIds = new Set(),
@@ -43,11 +47,20 @@ export function useGraphRendering({
     const isConnected = connectedNodeIds.has(node.id);
     const isHovered = hoveredNode?.id === node.id;
     const isDragSource = dragLink?.sourceNode?.id === node.id;
+    const isDragTarget = dragTargetNode?.id === node.id;
     const isSelected = selectedNode?.id === node.id;
     const isHighlighted = highlightedNodeIds.size > 0 && highlightedNodeIds.has(node.id);
     const isDimmed = highlightedNodeIds.size > 0 && !highlightedNodeIds.has(node.id);
     
-    if (isHovered && !isDragSource) {
+    if (isDragTarget) {
+      ctx.beginPath();
+      ctx.arc(node.x, node.y, ringOuterScaled, 0, 2 * Math.PI);
+      ctx.arc(node.x, node.y, ringInnerScaled, 0, 2 * Math.PI, true);
+      ctx.fillStyle = 'rgba(34, 197, 94, 0.7)';
+      ctx.fill();
+    }
+    
+    if (isHovered && !isDragSource && !isDragTarget) {
       ctx.beginPath();
       ctx.arc(node.x, node.y, ringOuterScaled, 0, 2 * Math.PI);
       ctx.arc(node.x, node.y, ringInnerScaled, 0, 2 * Math.PI, true);
@@ -93,7 +106,7 @@ export function useGraphRendering({
     ctx.fillStyle = isHovered || isSelected || isDragSource ? '#000' : '#fff';
     ctx.fillText(label, node.x, node.y);
     ctx.globalAlpha = 1;
-  }, [connectedNodeIds, hoveredNode, dragLink, selectedNode, ringHovered, highlightedNodeIds]);
+  }, [connectedNodeIds, hoveredNode, dragLink, dragTargetNode, selectedNode, ringHovered, highlightedNodeIds]);
 
   const nodeColor = useCallback((node: any) => {
     const isDragSource = dragLink?.sourceNode?.id === node.id;
@@ -120,6 +133,14 @@ export function useGraphRendering({
   }, [dragLink]);
 
   const linkColor = useCallback((link: any) => {
+    const linkId = link.id || `${link.source?.id || link.source}-${link.target?.id || link.target}`;
+    const hoveredLinkId = hoveredLink?.id || (hoveredLink ? `${hoveredLink.source?.id || hoveredLink.source}-${hoveredLink.target?.id || hoveredLink.target}` : null);
+    const isHovered = linkId === hoveredLinkId;
+    
+    if (isHovered) {
+      return '#22c55e';
+    }
+    
     const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
     const targetId = typeof link.target === 'string' ? link.target : link.target.id;
     
@@ -127,9 +148,17 @@ export function useGraphRendering({
       return '#60a5fa';
     }
     return '#64748B';
-  }, [connectedNodeIds]);
+  }, [connectedNodeIds, hoveredLink]);
 
   const linkWidth = useCallback((link: any) => {
+    const linkId = link.id || `${link.source?.id || link.source}-${link.target?.id || link.target}`;
+    const hoveredLinkId = hoveredLink?.id || (hoveredLink ? `${hoveredLink.source?.id || hoveredLink.source}-${hoveredLink.target?.id || hoveredLink.target}` : null);
+    const isHovered = linkId === hoveredLinkId;
+    
+    if (isHovered) {
+      return 4;
+    }
+    
     const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
     const targetId = typeof link.target === 'string' ? link.target : link.target.id;
     
@@ -137,7 +166,7 @@ export function useGraphRendering({
       return 3;
     }
     return 1.5;
-  }, [connectedNodeIds]);
+  }, [connectedNodeIds, hoveredLink]);
 
   const nodePointerAreaPaint = useCallback((node: any, color: string, ctx: CanvasRenderingContext2D) => {
     ctx.beginPath();

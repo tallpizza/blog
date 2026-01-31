@@ -12,6 +12,7 @@ interface UseRingLinkCreationProps {
 
 interface UseRingLinkCreationReturn {
   dragLink: DragLink | null;
+  dragTargetNode: ForceGraphNode | null;
   ringHovered: boolean;
   isDraggingLinkRef: RefObject<boolean>;
   clearDragLink: () => void;
@@ -25,6 +26,7 @@ export function useRingLinkCreation({
   onPendingLink,
 }: UseRingLinkCreationProps): UseRingLinkCreationReturn {
   const [dragLink, setDragLink] = useState<DragLink | null>(null);
+  const [dragTargetNode, setDragTargetNode] = useState<ForceGraphNode | null>(null);
   const [ringHovered, setRingHovered] = useState(false);
   const isDraggingLinkRef = useRef(false);
 
@@ -97,7 +99,13 @@ export function useRingLinkCreation({
       if (!isDraggingLinkRef.current || !fgRef.current) return;
       
       const { x: graphX, y: graphY } = getGraphCoords(clientX, clientY);
-      setDragLink(prev => prev ? { ...prev, mouseX: graphX, mouseY: graphY } : null);
+      setDragLink(prev => {
+        if (!prev) return null;
+        const found = findNodeAt(graphX, graphY);
+        const targetNode = found && found.node.id !== prev.sourceNode.id ? found.node : null;
+        setDragTargetNode(targetNode);
+        return { ...prev, mouseX: graphX, mouseY: graphY };
+      });
     };
 
     const handlePointerUp = (clientX: number, clientY: number) => {
@@ -118,7 +126,7 @@ export function useRingLinkCreation({
         }
         return null;
       });
-      
+      setDragTargetNode(null);
       isDraggingLinkRef.current = false;
     };
 
@@ -149,6 +157,7 @@ export function useRingLinkCreation({
     const handleTouchCancel = () => {
       isDraggingLinkRef.current = false;
       setDragLink(null);
+      setDragTargetNode(null);
     };
 
     const handleMouseMoveForRing = (e: MouseEvent) => {
@@ -189,11 +198,13 @@ export function useRingLinkCreation({
 
   const clearDragLink = () => {
     setDragLink(null);
+    setDragTargetNode(null);
     isDraggingLinkRef.current = false;
   };
 
   return {
     dragLink,
+    dragTargetNode,
     ringHovered,
     isDraggingLinkRef,
     clearDragLink,

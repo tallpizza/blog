@@ -25,6 +25,7 @@ export default function GraphViewer() {
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
   const [selectedRel, setSelectedRel] = useState<Relationship | null>(null);
   const [hoveredNode, setHoveredNode] = useState<any>(null);
+  const [hoveredLink, setHoveredLink] = useState<any>(null);
   
   const [deleting, setDeleting] = useState(false);
   const [is3D, setIs3D] = useState(false);
@@ -153,7 +154,7 @@ export default function GraphViewer() {
     }
   }, [fetchGraphData, pushCommand]);
 
-  const { dragLink, ringHovered, clearDragLink } = useRingLinkCreation({
+  const { dragLink, dragTargetNode, ringHovered, clearDragLink } = useRingLinkCreation({
     containerRef,
     fgRef,
     nodes: forceGraphData.nodes,
@@ -170,8 +171,10 @@ export default function GraphViewer() {
     nodePointerAreaPaint,
   } = useGraphRendering({
     hoveredNode,
+    hoveredLink,
     selectedNode,
     dragLink,
+    dragTargetNode,
     ringHovered,
     links: forceGraphData.links,
     highlightedNodeIds,
@@ -377,6 +380,7 @@ export default function GraphViewer() {
               onNodeClick={handleNodeClick}
               onNodeHover={(node: any) => setHoveredNode(node)}
               onLinkClick={handleLinkClick}
+              onLinkHover={(link: any) => setHoveredLink(link)}
               onBackgroundClick={handleBackgroundClick}
               backgroundColor={GRAPH_BACKGROUND}
               showNavInfo={false}
@@ -396,6 +400,7 @@ export default function GraphViewer() {
             onNodeClick={handleNodeClick}
             onNodeHover={(node: any) => setHoveredNode(node)}
             onLinkClick={handleLinkClick}
+            onLinkHover={(link: any) => setHoveredLink(link)}
             onBackgroundClick={handleBackgroundClick}
             onRenderFramePost={onRenderFramePost}
             d3AlphaDecay={0.05}
