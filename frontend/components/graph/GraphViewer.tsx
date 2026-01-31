@@ -120,6 +120,22 @@ export default function GraphViewer() {
       
       const relData = await res.json();
       
+      const newRel: Relationship = {
+        id: relData.id,
+        type: 'RELATES_TO',
+        startNode: link.fromNodeId,
+        endNode: link.toNodeId,
+        properties: {},
+      };
+      
+      setGraphData(prev => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          relationships: [...prev.relationships, newRel],
+        };
+      });
+      
       pushCommand({
         type: 'CREATE_RELATIONSHIP',
         data: { 
@@ -137,22 +153,11 @@ export default function GraphViewer() {
         },
       });
       
-      await fetchGraphData();
-      
-      if (relData.id) {
-        const newRel = {
-          id: relData.id,
-          type: 'RELATES_TO',
-          startNode: link.fromNodeId,
-          endNode: link.toNodeId,
-          properties: {},
-        };
-        setSelectedRel(newRel);
-      }
+      setSelectedRel(newRel);
     } catch (err) {
       console.error('Error creating link:', err);
     }
-  }, [fetchGraphData, pushCommand]);
+  }, [pushCommand]);
 
   const { dragLink, dragTargetNode, ringHovered, clearDragLink } = useRingLinkCreation({
     containerRef,
@@ -198,6 +203,14 @@ export default function GraphViewer() {
     try {
       const res = await fetch(`/api/relationships/${encodeURIComponent(selectedRel.id)}`, { method: 'DELETE' });
       if (res.ok || res.status === 204) {
+        setGraphData(prev => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            relationships: prev.relationships.filter(r => r.id !== selectedRel.id),
+          };
+        });
+        
         pushCommand({
           type: 'DELETE_RELATIONSHIP',
           data: { relId: selectedRel.id },
@@ -209,21 +222,22 @@ export default function GraphViewer() {
           },
         });
         setSelectedRel(null);
-        await fetchGraphData();
       }
     } finally {
       setDeleting(false);
     }
-  }, [selectedRel, fetchGraphData, pushCommand]);
+  }, [selectedRel, pushCommand]);
 
-  const handleNodeCreated = useCallback((nodeId: string) => {
-    fetchGraphData().then(() => {
-      const newNode = graphData?.nodes.find(n => n.id === nodeId);
-      if (newNode) {
-        setSelectedNode(newNode);
-      }
+  const handleNodeCreated = useCallback((node: Node) => {
+    setGraphData(prev => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        nodes: [...prev.nodes, node],
+      };
     });
-  }, [fetchGraphData, graphData]);
+    setSelectedNode(node);
+  }, []);
 
   const handleBackgroundClick = useCallback(() => {
     setSelectedNode(null);
@@ -417,8 +431,17 @@ export default function GraphViewer() {
           onClose={() => setSelectedNode(null)}
           onUpdate={() => fetchGraphData()}
           onDelete={() => {
+            const nodeId = selectedNode.id;
+            setGraphData(prev => {
+              if (!prev) return prev;
+              return {
+                nodes: prev.nodes.filter(n => n.id !== nodeId),
+                relationships: prev.relationships.filter(
+                  r => r.startNode !== nodeId && r.endNode !== nodeId
+                ),
+              };
+            });
             setSelectedNode(null);
-            fetchGraphData();
           }}
           isMobile={isMobile}
         />

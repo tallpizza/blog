@@ -1,14 +1,13 @@
 'use client';
 
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
+import { Node } from '@/components/graph/types';
 
 interface NodePanelProps {
-  onNodeCreated?: (nodeId: string) => void;
+  onNodeCreated?: (node: Node) => void;
 }
 
 export default function NodePanel({ onNodeCreated }: NodePanelProps) {
-  const queryClient = useQueryClient();
-
   const createNodeMutation = useMutation({
     mutationFn: async () => {
       const response = await fetch('/api/nodes', {
@@ -20,8 +19,7 @@ export default function NodePanel({ onNodeCreated }: NodePanelProps) {
       return response.json();
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['graph'] });
-      onNodeCreated?.(data.id);
+      onNodeCreated?.(data);
     },
   });
 
