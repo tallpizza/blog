@@ -22,18 +22,7 @@ export function BottomSheet({ title, onClose, children, 'data-testid': testId }:
           <div className="flex flex-col items-center pt-3 pb-2">
             <Drawer.Handle className="w-12 h-1.5 bg-muted-foreground rounded-full" />
           </div>
-
-          <div className="px-4 pb-3 flex justify-between items-center border-b border-border">
-            <Drawer.Title className="text-lg font-bold text-foreground">
-              {title}
-            </Drawer.Title>
-            <button
-              onClick={onClose}
-              className="text-muted-foreground hover:text-foreground text-xl p-1 transition-colors"
-            >
-              ✕
-            </button>
-          </div>
+          <Drawer.Title className="sr-only">{title}</Drawer.Title>
 
           <div className="px-4 py-4 overflow-y-auto flex-1">
             {children}

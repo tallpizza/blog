@@ -155,7 +155,6 @@ const obsidianTheme = EditorView.theme({
     backgroundColor: '#1f2937',
     color: '#e5e7eb',
     fontSize: '15px',
-    height: '100%',
   },
   '&.cm-focused': {
     outline: 'none',
@@ -163,8 +162,6 @@ const obsidianTheme = EditorView.theme({
   '.cm-scroller': {
     fontFamily: 'ui-sans-serif, system-ui, -apple-system, sans-serif',
     lineHeight: '1.7',
-    overflow: 'auto',
-    height: '100%',
   },
   '.cm-content': {
     padding: '16px',
@@ -241,31 +238,27 @@ export function ObsidianEditor({ value, onChange, className, minHeight = '200px'
   );
 
   return (
-    <div 
-      className={`rounded-lg overflow-hidden border border-gray-700 ${className || ''}`} 
-      style={{ minHeight, display: 'flex', flexDirection: 'column' }}
-    >
-      <CodeMirror
-        value={value}
-        onChange={handleChange}
-        extensions={extensions}
-        theme="dark"
-        basicSetup={{
-          lineNumbers: false,
-          foldGutter: false,
-          highlightActiveLine: false,
-          highlightSelectionMatches: false,
-          drawSelection: true,
-          bracketMatching: false,
-          closeBrackets: false,
-          autocompletion: false,
-          rectangularSelection: false,
-          crosshairCursor: false,
-          highlightActiveLineGutter: false,
-          indentOnInput: false,
-        }}
-        style={{ minHeight, flex: 1 }}
-      />
-    </div>
+    <CodeMirror
+      value={value}
+      onChange={handleChange}
+      extensions={extensions}
+      theme="dark"
+      className={`rounded-lg overflow-hidden border border-gray-700 ${className || ''}`}
+      basicSetup={{
+        lineNumbers: false,
+        foldGutter: false,
+        highlightActiveLine: false,
+        highlightSelectionMatches: false,
+        drawSelection: true,
+        bracketMatching: false,
+        closeBrackets: false,
+        autocompletion: false,
+        rectangularSelection: false,
+        crosshairCursor: false,
+        highlightActiveLineGutter: false,
+        indentOnInput: false,
+      }}
+      minHeight={minHeight}
+    />
   );
 }
