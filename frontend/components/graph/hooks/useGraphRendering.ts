@@ -213,9 +213,10 @@ export function useGraphRendering({
     return 1.5;
   }, [connectedNodeIds, hoveredLink]);
 
-  const nodePointerAreaPaint = useCallback((node: any, color: string, ctx: CanvasRenderingContext2D) => {
+  const nodePointerAreaPaint = useCallback((node: any, color: string, ctx: CanvasRenderingContext2D, globalScale: number) => {
+    const scaledRadius = nodeRadius / globalScale;
     ctx.beginPath();
-    ctx.arc(node.x, node.y, nodeRadius, 0, 2 * Math.PI);
+    ctx.arc(node.x, node.y, scaledRadius, 0, 2 * Math.PI);
     ctx.fillStyle = color;
     ctx.fill();
   }, [nodeRadius]);
