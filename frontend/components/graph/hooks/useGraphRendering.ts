@@ -2,14 +2,14 @@ import { useCallback, useMemo } from 'react';
 import { DragLink, ForceGraphLink, ForceGraphNode, Node } from '../types';
 import { NODE_RADIUS, RING_INNER, RING_OUTER } from '../constants';
 
-interface ParsedLabel {
+export interface ParsedLabel {
   text: string;
   fontWeight: string;
   fontStyle: string;
   sizeMultiplier: number;
 }
 
-function parseMarkdownLabel(label: string): ParsedLabel {
+export function parseMarkdownLabel(label: string): ParsedLabel {
   let text = label;
   let fontWeight = 'normal';
   let fontStyle = 'normal';

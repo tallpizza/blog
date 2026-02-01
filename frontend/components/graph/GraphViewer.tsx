@@ -6,8 +6,9 @@ import dynamic from 'next/dynamic';
 import { GraphData, Node, Relationship, PendingLink, ForceGraphData } from './types';
 import { Graph3DErrorBoundary } from './Graph3DErrorBoundary';
 import { NodeDetailPanel, RelationshipDetailPanel, SearchPanel, UndoRedoButtons } from './panels';
-import { useRingLinkCreation, useGraphRendering, useUndoRedo } from './hooks';
+import { useRingLinkCreation, useGraphRendering, useUndoRedo, parseMarkdownLabel } from './hooks';
 import { getNodeCaption, getNodeColor } from './utils';
+import SpriteText from 'three-spritetext';
 import NodePanel from '@/components/nodes/NodePanel';
 import { api } from '@/lib/api-client';
 
@@ -225,6 +226,18 @@ export default function GraphViewer() {
     highlightedNodeIds,
   });
 
+  const nodeThreeObject = useCallback((node: any) => {
+    const parsed = parseMarkdownLabel(node.label);
+    const sprite = new SpriteText(parsed.text);
+    sprite.color = '#ffffff';
+    sprite.textHeight = 4 * parsed.sizeMultiplier;
+    sprite.fontWeight = parsed.fontWeight;
+    sprite.backgroundColor = 'rgba(0,0,0,0.6)';
+    sprite.padding = 2;
+    sprite.borderRadius = 3;
+    return sprite;
+  }, []);
+
   const handleNodeClick = useCallback((node: any) => {
     if (dragLink) return;
     setSelectedRel(null);
@@ -425,6 +438,8 @@ export default function GraphViewer() {
               graphData={forceGraphData}
               nodeLabel="label"
               nodeColor={nodeColor}
+              nodeThreeObject={nodeThreeObject}
+              nodeThreeObjectExtend={true}
               linkColor={linkColor}
               linkWidth={linkWidth}
               linkDirectionalParticles={2}
