@@ -125,20 +125,13 @@ export function useGraphRendering({
     let fillColor = node.color;
     let nodeAlpha = 1;
     if (isDragSource) fillColor = '#22c55e';
-    else if (isHovered) fillColor = '#ffffff';
-    else if (isSelected) nodeAlpha = 0.6;
+    else if (isHovered || isSelected) nodeAlpha = 0.6;
     else if (isDimmed) { fillColor = '#374151'; nodeAlpha = 0.4; }
     
     ctx.fillStyle = fillColor;
     ctx.globalAlpha = nodeAlpha;
     ctx.fill();
     ctx.globalAlpha = 1;
-    
-    if (isSelected) {
-      ctx.strokeStyle = '#ffffff';
-      ctx.lineWidth = 2 / globalScale;
-      ctx.stroke();
-    }
     
     if (isHighlighted && !isHovered && !isSelected) {
       ctx.strokeStyle = '#fbbf24';
@@ -149,7 +142,7 @@ export function useGraphRendering({
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.globalAlpha = isDimmed ? 0.4 : 1;
-    ctx.fillStyle = isHovered || isDragSource ? '#000' : isSelected ? '#9ca3af' : '#fff';
+    ctx.fillStyle = isDragSource ? '#000' : (isHovered || isSelected) ? '#9ca3af' : '#fff';
     ctx.fillText(parsed.text, node.x, node.y);
     ctx.globalAlpha = 1;
   }, [connectedNodeIds, hoveredNode, dragLink, dragTargetNode, selectedNode, ringHovered, highlightedNodeIds, nodeRadius, ringInner, ringOuter]);
