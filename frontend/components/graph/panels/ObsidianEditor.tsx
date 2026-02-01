@@ -155,6 +155,7 @@ const obsidianTheme = EditorView.theme({
     backgroundColor: '#1f2937',
     color: '#e5e7eb',
     fontSize: '15px',
+    height: '100%',
   },
   '&.cm-focused': {
     outline: 'none',
@@ -162,6 +163,8 @@ const obsidianTheme = EditorView.theme({
   '.cm-scroller': {
     fontFamily: 'ui-sans-serif, system-ui, -apple-system, sans-serif',
     lineHeight: '1.7',
+    overflow: 'auto',
+    height: '100%',
   },
   '.cm-content': {
     padding: '16px',
@@ -240,7 +243,7 @@ export function ObsidianEditor({ value, onChange, className, minHeight = '200px'
   return (
     <div 
       className={`rounded-lg overflow-hidden border border-gray-700 ${className || ''}`} 
-      style={{ minHeight }}
+      style={{ minHeight, display: 'flex', flexDirection: 'column' }}
     >
       <CodeMirror
         value={value}
@@ -261,7 +264,7 @@ export function ObsidianEditor({ value, onChange, className, minHeight = '200px'
           highlightActiveLineGutter: false,
           indentOnInput: false,
         }}
-        style={{ minHeight }}
+        style={{ minHeight, flex: 1 }}
       />
     </div>
   );
