@@ -123,18 +123,20 @@ export function useGraphRendering({
     ctx.arc(node.x, node.y, nodeRadiusScaled, 0, 2 * Math.PI);
     
     let fillColor = node.color;
+    let nodeAlpha = 1;
     if (isDragSource) fillColor = '#22c55e';
-    else if (isHovered || isSelected) fillColor = '#ffffff';
-    else if (isDimmed) fillColor = '#374151';
+    else if (isHovered) fillColor = '#ffffff';
+    else if (isSelected) nodeAlpha = 0.6;
+    else if (isDimmed) { fillColor = '#374151'; nodeAlpha = 0.4; }
     
     ctx.fillStyle = fillColor;
-    ctx.globalAlpha = isDimmed ? 0.4 : 1;
+    ctx.globalAlpha = nodeAlpha;
     ctx.fill();
     ctx.globalAlpha = 1;
     
     if (isSelected) {
-      ctx.strokeStyle = '#3B82F6';
-      ctx.lineWidth = 3 / globalScale;
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2 / globalScale;
       ctx.stroke();
     }
     
@@ -147,7 +149,7 @@ export function useGraphRendering({
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.globalAlpha = isDimmed ? 0.4 : 1;
-    ctx.fillStyle = isHovered || isSelected || isDragSource ? '#000' : '#fff';
+    ctx.fillStyle = isHovered || isDragSource ? '#000' : isSelected ? '#9ca3af' : '#fff';
     ctx.fillText(parsed.text, node.x, node.y);
     ctx.globalAlpha = 1;
   }, [connectedNodeIds, hoveredNode, dragLink, dragTargetNode, selectedNode, ringHovered, highlightedNodeIds, nodeRadius, ringInner, ringOuter]);
