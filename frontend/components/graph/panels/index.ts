@@ -5,3 +5,4 @@ export { BottomSheet } from './BottomSheet';
 export { SearchPanel } from './SearchPanel';
 export { UndoRedoButtons } from './UndoRedoButtons';
 export { SettingsPanel } from './SettingsPanel';
+export { ResizablePanel } from './ResizablePanel';

@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 import { Node as GraphNode } from '../types';
 import { DEFAULT_LABELS } from '../constants';
 import { BottomSheet } from './BottomSheet';
+import { ResizablePanel } from './ResizablePanel';
 import { api } from '@/lib/api-client';
 import { useLabelColors } from '@/components/providers/LabelColorProvider';
 
@@ -481,7 +482,13 @@ export function NodeDetailPanel({ node, onClose, onUpdate, onDelete, isMobile }:
   }
 
   return (
-    <div data-testid="node-detail-panel" className="fixed top-0 right-0 h-full w-96 max-w-[90vw] bg-panel border-l border-border p-4 overflow-y-auto z-40">
+    <ResizablePanel
+      data-testid="node-detail-panel"
+      storageKey="node-detail"
+      defaultWidth={384}
+      minWidth={320}
+      maxWidth={700}
+    >
       <div className="flex justify-between items-center mb-4">
         <div className="flex items-center gap-3">
           <h2 className="text-xl font-bold text-foreground">Edit</h2>
@@ -492,6 +499,6 @@ export function NodeDetailPanel({ node, onClose, onUpdate, onDelete, isMobile }:
         </button>
       </div>
       {content}
-    </div>
+    </ResizablePanel>
   );
 }

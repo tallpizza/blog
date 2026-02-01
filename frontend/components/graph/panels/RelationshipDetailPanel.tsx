@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Relationship } from '../types';
 import { BottomSheet } from './BottomSheet';
+import { ResizablePanel } from './ResizablePanel';
 import { api } from '@/lib/api-client';
 
 interface Props {
@@ -223,12 +224,17 @@ export function RelationshipDetailPanel({
   }
 
   return (
-    <div className="fixed top-0 right-0 h-full w-80 max-w-[90vw] bg-panel border-l border-border p-4 overflow-y-auto z-40">
+    <ResizablePanel
+      storageKey="relationship-detail"
+      defaultWidth={320}
+      minWidth={280}
+      maxWidth={600}
+    >
       <div className="flex justify-between items-start mb-4">
         <h2 className="text-xl font-bold text-foreground">Relationship</h2>
         <button onClick={onClose} className="text-muted-foreground hover:text-foreground text-xl">✕</button>
       </div>
       {content}
-    </div>
+    </ResizablePanel>
   );
 }
