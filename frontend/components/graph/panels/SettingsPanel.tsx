@@ -150,6 +150,15 @@ export function SettingsPanel() {
               step={10}
               onChange={(v) => handleSettingChange('linkStrength')(v / 100)}
             />
+
+            <SliderSetting
+              label="Velocity Decay"
+              value={settings.velocityDecay * 100}
+              min={10}
+              max={90}
+              step={5}
+              onChange={(v) => handleSettingChange('velocityDecay')(v / 100)}
+            />
           </div>
 
           <div className="px-4 pb-4">

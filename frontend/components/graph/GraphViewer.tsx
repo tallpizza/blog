@@ -400,17 +400,16 @@ export default function GraphViewer() {
           />
         </div>
 
-        <div className="absolute top-4 right-4 z-10">
+        <div className="absolute top-4 right-4 z-20 flex items-start gap-2">
+          {!isMobile && (
+            <SearchPanel
+              nodes={forceGraphData.nodes}
+              onNodeSelect={handleSearchSelect}
+              onHighlightChange={handleHighlightChange}
+            />
+          )}
           <SettingsPanel />
         </div>
-
-        {!isMobile && (
-          <SearchPanel
-            nodes={forceGraphData.nodes}
-            onNodeSelect={handleSearchSelect}
-            onHighlightChange={handleHighlightChange}
-          />
-        )}
 
         {dragLink && (
           <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 px-4 py-2 bg-card/90 rounded text-sm text-foreground border border-border">
@@ -486,7 +485,7 @@ export default function GraphViewer() {
             onBackgroundClick={handleBackgroundClick}
             onRenderFramePost={onRenderFramePost}
             d3AlphaDecay={0.05}
-            d3VelocityDecay={0.4}
+            d3VelocityDecay={graphSettings.velocityDecay}
             cooldownTicks={100}
             backgroundColor={graphBgColor}
           />

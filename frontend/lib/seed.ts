@@ -11,6 +11,7 @@ const DEFAULT_GRAPH_SETTINGS = {
   chargeStrength: -200,
   linkDistance: 150,
   linkStrength: 1,
+  velocityDecay: 0.4,
 };
 
 const SAMPLE_NODES = [
@@ -19,8 +20,31 @@ const SAMPLE_NODES = [
   { label: 'Solution', text: '# NextAuth.js 적용\n\n소셜 로그인 + 세션 관리 통합' },
 ];
 
+async function waitForNeo4j(driver: ReturnType<typeof getNeo4jDriver>, maxRetries = 10, delayMs = 3000) {
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      const session = driver.session();
+      await session.run('RETURN 1');
+      await session.close();
+      console.log('[Seed] Neo4j is ready');
+      return true;
+    } catch (error) {
+      console.log(`[Seed] Waiting for Neo4j... (${i + 1}/${maxRetries})`);
+      await new Promise(resolve => setTimeout(resolve, delayMs));
+    }
+  }
+  return false;
+}
+
 export async function seedDatabase() {
   const driver = getNeo4jDriver();
+  
+  const ready = await waitForNeo4j(driver);
+  if (!ready) {
+    console.error('[Seed] Neo4j not available after retries, skipping seed');
+    return;
+  }
+
   const session = driver.session();
 
   try {
