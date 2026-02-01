@@ -48,6 +48,20 @@ export interface GraphData {
 
 export type LabelColors = Record<string, string>;
 
+export interface GraphSettings {
+  nodeRadius: number;
+  chargeStrength: number;
+  linkDistance: number;
+  linkStrength: number;
+}
+
+export const DEFAULT_GRAPH_SETTINGS: GraphSettings = {
+  nodeRadius: 20,
+  chargeStrength: -200,
+  linkDistance: 150,
+  linkStrength: 1,
+};
+
 export const api = {
   getGraph: () => executeQuery<GraphData>('getGraph'),
 
@@ -55,6 +69,11 @@ export const api = {
 
   setLabelColors: (labelColors: LabelColors) =>
     executeQuery<LabelColors>('setLabelColors', { labelColors: JSON.stringify(labelColors) }),
+
+  getGraphSettings: () => executeQuery<GraphSettings | null>('getGraphSettings'),
+
+  setGraphSettings: (settings: GraphSettings) =>
+    executeQuery<GraphSettings>('setGraphSettings', { graphSettings: JSON.stringify(settings) }),
 
   createNode: (params: { type?: string; [key: string]: unknown }) =>
     executeQuery<GraphNode>('createNode', params),

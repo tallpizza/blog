@@ -175,6 +175,49 @@ export const QUERY_REGISTRY = {
     },
   },
 
+  getGraphSettings: {
+    description: 'Get graph settings from Config node',
+    cypher: `
+      MATCH (c:Config)
+      RETURN c.graphSettings as graphSettings
+    `,
+    validate: (_params: unknown): _params is Record<string, never> => true,
+    transform: (records: unknown[]) => {
+      if (!records[0]) return null;
+      const record = records[0] as { graphSettings?: string };
+      if (!record.graphSettings) return null;
+      try {
+        return JSON.parse(record.graphSettings);
+      } catch {
+        return null;
+      }
+    },
+  },
+
+  setGraphSettings: {
+    description: 'Set graph settings in Config node',
+    cypher: `
+      MERGE (c:Config)
+      SET c.graphSettings = $graphSettings
+      RETURN c.graphSettings as graphSettings
+    `,
+    validate: (params: unknown): params is { graphSettings: string } => {
+      if (!isObject(params)) return false;
+      if (!isString(params.graphSettings)) return false;
+      return true;
+    },
+    transform: (records: unknown[]) => {
+      if (!records[0]) return null;
+      const record = records[0] as { graphSettings?: string };
+      if (!record.graphSettings) return null;
+      try {
+        return JSON.parse(record.graphSettings);
+      } catch {
+        return null;
+      }
+    },
+  },
+
   // ---------------------------------------------------------------------------
   // Node Queries
   // ---------------------------------------------------------------------------

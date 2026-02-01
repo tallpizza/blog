@@ -5,13 +5,14 @@ import dynamic from 'next/dynamic';
 
 import { GraphData, Node, Relationship, PendingLink, ForceGraphData } from './types';
 import { Graph3DErrorBoundary } from './Graph3DErrorBoundary';
-import { NodeDetailPanel, RelationshipDetailPanel, SearchPanel, UndoRedoButtons } from './panels';
+import { NodeDetailPanel, RelationshipDetailPanel, SearchPanel, UndoRedoButtons, SettingsPanel } from './panels';
 import { useRingLinkCreation, useGraphRendering, useUndoRedo, parseMarkdownLabel } from './hooks';
 import { getNodeCaption } from './utils';
 import SpriteText from 'three-spritetext';
 import NodePanel from '@/components/nodes/NodePanel';
 import { api } from '@/lib/api-client';
 import { useLabelColors } from '@/components/providers/LabelColorProvider';
+import { useGraphSettings } from '@/components/providers/GraphSettingsProvider';
 
 const ForceGraph2D = dynamic(() => import('react-force-graph-2d'), { ssr: false });
 const ForceGraph3D = dynamic(() => import('react-force-graph-3d'), { ssr: false });
@@ -20,6 +21,7 @@ export default function GraphViewer() {
   const fgRef = useRef<any>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const { getColor, colors } = useLabelColors();
+  const { settings: graphSettings } = useGraphSettings();
   
   const [graphData, setGraphData] = useState<GraphData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -152,14 +154,13 @@ export default function GraphViewer() {
     };
   }, [forceGraphData]);
 
-  const forceConfiguredRef = useRef(false);
   useEffect(() => {
-    if (fgRef.current && !forceConfiguredRef.current && forceGraphData.nodes.length > 0) {
-      fgRef.current.d3Force('charge')?.strength(-200);
-      fgRef.current.d3Force('link')?.distance(150);
-      forceConfiguredRef.current = true;
+    if (fgRef.current && forceGraphData.nodes.length > 0) {
+      fgRef.current.d3Force('charge')?.strength(graphSettings.chargeStrength);
+      fgRef.current.d3Force('link')?.distance(graphSettings.linkDistance).strength(graphSettings.linkStrength);
+      fgRef.current.d3ReheatSimulation?.();
     }
-  }, [forceGraphData.nodes.length]);
+  }, [forceGraphData.nodes.length, graphSettings.chargeStrength, graphSettings.linkDistance, graphSettings.linkStrength]);
 
   const handleInstantLinkCreate = useCallback(async (link: PendingLink) => {
     try {
@@ -214,6 +215,7 @@ export default function GraphViewer() {
     nodes: forceGraphData.nodes,
     is3D,
     onPendingLink: handleInstantLinkCreate,
+    nodeRadius: graphSettings.nodeRadius,
   });
 
   const {
@@ -232,6 +234,7 @@ export default function GraphViewer() {
     ringHovered,
     links: forceGraphData.links,
     highlightedNodeIds,
+    nodeRadius: graphSettings.nodeRadius,
   });
 
   const nodeThreeObject = useCallback((node: any) => {
@@ -395,6 +398,10 @@ export default function GraphViewer() {
             onRedo={handleRedo}
             isProcessing={isUndoRedoProcessing}
           />
+        </div>
+
+        <div className="absolute top-4 right-4 z-10">
+          <SettingsPanel />
         </div>
 
         {!isMobile && (

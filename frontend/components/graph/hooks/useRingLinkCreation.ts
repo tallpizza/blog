@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, RefObject } from 'react';
 import { DragLink, PendingLink, ForceGraphNode } from '../types';
-import { RING_INNER, RING_OUTER, NODE_RADIUS } from '../constants';
+import { NODE_RADIUS } from '../constants';
 
 interface UseRingLinkCreationProps {
   containerRef: RefObject<HTMLDivElement | null>;
@@ -8,6 +8,7 @@ interface UseRingLinkCreationProps {
   nodes: ForceGraphNode[];
   is3D: boolean;
   onPendingLink: (link: PendingLink) => void;
+  nodeRadius?: number;
 }
 
 interface UseRingLinkCreationReturn {
@@ -24,11 +25,16 @@ export function useRingLinkCreation({
   nodes,
   is3D,
   onPendingLink,
+  nodeRadius: nodeRadiusProp,
 }: UseRingLinkCreationProps): UseRingLinkCreationReturn {
   const [dragLink, setDragLink] = useState<DragLink | null>(null);
   const [dragTargetNode, setDragTargetNode] = useState<ForceGraphNode | null>(null);
   const [ringHovered, setRingHovered] = useState(false);
   const isDraggingLinkRef = useRef(false);
+  
+  const nodeRadius = nodeRadiusProp ?? NODE_RADIUS;
+  const ringInner = nodeRadius + 4;
+  const ringOuter = nodeRadius + 12;
 
   useEffect(() => {
     if (is3D) return;
@@ -52,7 +58,7 @@ export function useRingLinkCreation({
         const dx = n.x - graphX;
         const dy = n.y - graphY;
         const dist = Math.sqrt(dx * dx + dy * dy);
-        if (dist < NODE_RADIUS) return { node, dist };
+        if (dist < nodeRadius) return { node, dist };
       }
       return null;
     };
@@ -72,7 +78,7 @@ export function useRingLinkCreation({
       const dy = clientY - nodeScreenY;
       const screenDist = Math.sqrt(dx * dx + dy * dy);
       
-      return screenDist >= RING_INNER && screenDist <= RING_OUTER;
+      return screenDist >= ringInner && screenDist <= ringOuter;
     };
 
     const handlePointerDown = (clientX: number, clientY: number, e: Event) => {
@@ -194,7 +200,7 @@ export function useRingLinkCreation({
       container.removeEventListener('touchend', handleTouchEnd, true);
       container.removeEventListener('touchcancel', handleTouchCancel, true);
     };
-  }, [is3D, nodes, containerRef, fgRef, onPendingLink]);
+  }, [is3D, nodes, containerRef, fgRef, onPendingLink, nodeRadius, ringInner, ringOuter]);
 
   const clearDragLink = () => {
     setDragLink(null);

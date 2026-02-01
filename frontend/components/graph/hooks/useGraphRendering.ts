@@ -1,6 +1,6 @@
 import { useCallback, useMemo } from 'react';
 import { DragLink, ForceGraphLink, ForceGraphNode, Node } from '../types';
-import { NODE_RADIUS, RING_INNER, RING_OUTER } from '../constants';
+import { NODE_RADIUS } from '../constants';
 
 export interface ParsedLabel {
   text: string;
@@ -49,6 +49,7 @@ interface UseGraphRenderingProps {
   ringHovered: boolean;
   links: ForceGraphLink[];
   highlightedNodeIds?: Set<string>;
+  nodeRadius?: number;
 }
 
 export function useGraphRendering({
@@ -60,7 +61,11 @@ export function useGraphRendering({
   ringHovered,
   links,
   highlightedNodeIds = new Set(),
+  nodeRadius: nodeRadiusProp,
 }: UseGraphRenderingProps) {
+  const nodeRadius = nodeRadiusProp ?? NODE_RADIUS;
+  const ringInner = nodeRadius + 4;
+  const ringOuter = nodeRadius + 12;
   const connectedNodeIds = useMemo(() => {
     if (!hoveredNode) return new Set<string>();
     
@@ -79,9 +84,9 @@ export function useGraphRendering({
     const baseFontSize = 12 / globalScale;
     const fontSize = baseFontSize * parsed.sizeMultiplier;
     ctx.font = `${parsed.fontStyle} ${parsed.fontWeight} ${fontSize}px Sans-Serif`;
-    const nodeRadius = NODE_RADIUS / globalScale;
-    const ringInnerScaled = RING_INNER / globalScale;
-    const ringOuterScaled = RING_OUTER / globalScale;
+    const nodeRadiusScaled = nodeRadius / globalScale;
+    const ringInnerScaled = ringInner / globalScale;
+    const ringOuterScaled = ringOuter / globalScale;
     
     const isConnected = connectedNodeIds.has(node.id);
     const isHovered = hoveredNode?.id === node.id;
@@ -115,7 +120,7 @@ export function useGraphRendering({
     }
     
     ctx.beginPath();
-    ctx.arc(node.x, node.y, nodeRadius, 0, 2 * Math.PI);
+    ctx.arc(node.x, node.y, nodeRadiusScaled, 0, 2 * Math.PI);
     
     let fillColor = node.color;
     if (isDragSource) fillColor = '#22c55e';
@@ -145,7 +150,7 @@ export function useGraphRendering({
     ctx.fillStyle = isHovered || isSelected || isDragSource ? '#000' : '#fff';
     ctx.fillText(parsed.text, node.x, node.y);
     ctx.globalAlpha = 1;
-  }, [connectedNodeIds, hoveredNode, dragLink, dragTargetNode, selectedNode, ringHovered, highlightedNodeIds]);
+  }, [connectedNodeIds, hoveredNode, dragLink, dragTargetNode, selectedNode, ringHovered, highlightedNodeIds, nodeRadius, ringInner, ringOuter]);
 
   const nodeColor = useCallback((node: any) => {
     const isDragSource = dragLink?.sourceNode?.id === node.id;
@@ -209,10 +214,10 @@ export function useGraphRendering({
 
   const nodePointerAreaPaint = useCallback((node: any, color: string, ctx: CanvasRenderingContext2D) => {
     ctx.beginPath();
-    ctx.arc(node.x, node.y, NODE_RADIUS, 0, 2 * Math.PI);
+    ctx.arc(node.x, node.y, nodeRadius, 0, 2 * Math.PI);
     ctx.fillStyle = color;
     ctx.fill();
-  }, []);
+  }, [nodeRadius]);
 
   return {
     nodeCanvasObject,

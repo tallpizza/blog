@@ -6,6 +6,13 @@ const DEFAULT_LABEL_COLORS = {
   Solution: '#10B981',
 };
 
+const DEFAULT_GRAPH_SETTINGS = {
+  nodeRadius: 20,
+  chargeStrength: -200,
+  linkDistance: 150,
+  linkStrength: 1,
+};
+
 const SAMPLE_NODES = [
   { label: 'Problem', text: '# 사용자 인증이 너무 복잡함\n\n현재 로그인 프로세스가 5단계나 필요함' },
   { label: 'Idea', text: '# OAuth 소셜 로그인 도입\n\n구글, 카카오 로그인으로 간소화' },
@@ -26,8 +33,11 @@ export async function seedDatabase() {
     console.log('[Seed] Seeding database...');
 
     await session.run(
-      'MERGE (c:Config) SET c.labelColors = $colors RETURN c',
-      { colors: JSON.stringify(DEFAULT_LABEL_COLORS) }
+      'MERGE (c:Config) SET c.labelColors = $colors, c.graphSettings = $graphSettings RETURN c',
+      { 
+        colors: JSON.stringify(DEFAULT_LABEL_COLORS),
+        graphSettings: JSON.stringify(DEFAULT_GRAPH_SETTINGS),
+      }
     );
 
     for (const node of SAMPLE_NODES) {
