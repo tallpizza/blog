@@ -146,8 +146,8 @@ export default function GraphViewer() {
   const forceConfiguredRef = useRef(false);
   useEffect(() => {
     if (fgRef.current && !forceConfiguredRef.current && forceGraphData.nodes.length > 0) {
-      fgRef.current.d3Force('charge')?.strength(-100);
-      fgRef.current.d3Force('link')?.distance(80);
+      fgRef.current.d3Force('charge')?.strength(-200);
+      fgRef.current.d3Force('link')?.distance(150);
       forceConfiguredRef.current = true;
     }
   }, [forceGraphData.nodes.length]);
