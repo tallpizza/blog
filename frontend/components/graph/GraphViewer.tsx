@@ -160,7 +160,7 @@ export default function GraphViewer() {
       fgRef.current.d3Force('link')?.distance(graphSettings.linkDistance).strength(graphSettings.linkStrength);
       fgRef.current.d3ReheatSimulation?.();
     }
-  }, [forceGraphData.nodes.length, graphSettings.chargeStrength, graphSettings.linkDistance, graphSettings.linkStrength]);
+  }, [forceGraphData.nodes.length, graphSettings.chargeStrength, graphSettings.linkDistance, graphSettings.linkStrength, graphSettings.velocityDecay, graphSettings.nodeRadius]);
 
   const handleInstantLinkCreate = useCallback(async (link: PendingLink) => {
     try {
