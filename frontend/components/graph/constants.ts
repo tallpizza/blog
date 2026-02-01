@@ -1,9 +1,10 @@
 export const LABEL_COLORS: Record<string, string> = {
-  Category: '#3B82F6',
-  Product: '#10B981',
-  Customer: '#8B5CF6',
-  Order: '#F59E0B',
+  Problem: '#EF4444',
+  Idea: '#F59E0B',
+  Solution: '#10B981',
 };
+
+export const DEFAULT_LABELS = ['Problem', 'Idea', 'Solution'] as const;
 
 export const NODE_RADIUS = 20;
 export const RING_INNER = 24;

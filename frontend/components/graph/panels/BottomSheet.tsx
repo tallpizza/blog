@@ -6,9 +6,10 @@ interface Props {
   title: string;
   onClose: () => void;
   children: ReactNode;
+  'data-testid'?: string;
 }
 
-export function BottomSheet({ title, onClose, children }: Props) {
+export function BottomSheet({ title, onClose, children, 'data-testid': testId }: Props) {
   const [height, setHeight] = useState(40);
   const [isDragging, setIsDragging] = useState(false);
   const sheetRef = useRef<HTMLDivElement>(null);
@@ -65,7 +66,8 @@ export function BottomSheet({ title, onClose, children }: Props) {
   return (
     <div
       ref={sheetRef}
-      className="fixed bottom-0 left-0 right-0 bg-gray-900 rounded-t-2xl shadow-2xl z-50 transition-all duration-150"
+      data-testid={testId}
+      className="fixed bottom-0 left-0 right-0 bg-panel rounded-t-2xl shadow-2xl z-50 transition-all duration-150"
       style={{ height: `${height}vh` }}
     >
       <div
@@ -73,10 +75,10 @@ export function BottomSheet({ title, onClose, children }: Props) {
         onMouseDown={(e) => handleDragStart(e.clientY)}
         onTouchStart={(e) => handleDragStart(e.touches[0].clientY)}
       >
-        <div className="w-12 h-1.5 bg-gray-600 rounded-full mb-2" />
+        <div className="w-12 h-1.5 bg-muted-foreground rounded-full mb-2" />
         <div className="w-full px-4 flex justify-between items-center">
-          <h2 className="text-lg font-bold text-white">{title}</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-white text-xl p-1">✕</button>
+          <h2 className="text-lg font-bold text-foreground">{title}</h2>
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground text-xl p-1">✕</button>
         </div>
       </div>
       

@@ -59,25 +59,69 @@ export default function GraphViewer() {
     fetchGraphData();
   }, [fetchGraphData]);
 
-  const forceGraphData: ForceGraphData = useMemo(() => {
-    if (!graphData) return { nodes: [], links: [] };
+  const forceGraphDataRef = useRef<ForceGraphData>({ nodes: [], links: [] });
+  const prevNodeCountRef = useRef(0);
+  const prevRelCountRef = useRef(0);
+
+  const updateNodeInPlace = useCallback((updatedNode: Node) => {
+    const nodes = forceGraphDataRef.current.nodes;
+    const nodeToUpdate = nodes.find(n => n.id === String(updatedNode.id));
     
-    return {
-      nodes: graphData.nodes.map(node => ({
-        id: String(node.id),
+    if (nodeToUpdate) {
+      nodeToUpdate.label = getNodeCaption(updatedNode);
+      nodeToUpdate.labels = updatedNode.labels;
+      nodeToUpdate.color = getNodeColor(updatedNode.labels[0]);
+      nodeToUpdate.originalNode = updatedNode;
+    }
+  }, []);
+
+  const forceGraphData: ForceGraphData = useMemo(() => {
+    if (!graphData) return forceGraphDataRef.current;
+    
+    const nodeCount = graphData.nodes.length;
+    const relCount = graphData.relationships.length;
+    const structureChanged = nodeCount !== prevNodeCountRef.current || relCount !== prevRelCountRef.current;
+    
+    if (!structureChanged && forceGraphDataRef.current.nodes.length > 0) {
+      return forceGraphDataRef.current;
+    }
+    
+    prevNodeCountRef.current = nodeCount;
+    prevRelCountRef.current = relCount;
+
+    const existingNodesMap = new Map(
+      forceGraphDataRef.current.nodes.map(n => [n.id, n])
+    );
+    
+    const nodes = graphData.nodes.map(node => {
+      const nodeId = String(node.id);
+      const existing = existingNodesMap.get(nodeId);
+      if (existing) {
+        existing.label = getNodeCaption(node);
+        existing.labels = node.labels;
+        existing.color = getNodeColor(node.labels[0]);
+        existing.originalNode = node;
+        return existing;
+      }
+      return {
+        id: nodeId,
         label: getNodeCaption(node),
         labels: node.labels,
         color: getNodeColor(node.labels[0]),
         originalNode: node,
-      })),
-      links: graphData.relationships.map((rel, idx) => ({
-        id: `rel-${idx}`,
-        source: String(rel.startNode),
-        target: String(rel.endNode),
-        type: rel.type,
-        originalRel: rel,
-      })),
-    };
+      };
+    });
+
+    const links = graphData.relationships.map((rel, idx) => ({
+      id: `rel-${idx}`,
+      source: String(rel.startNode),
+      target: String(rel.endNode),
+      type: rel.type,
+      originalRel: rel,
+    }));
+
+    forceGraphDataRef.current = { nodes, links };
+    return forceGraphDataRef.current;
   }, [graphData]);
 
   useEffect(() => {
@@ -93,12 +137,14 @@ export default function GraphViewer() {
     };
   }, [forceGraphData]);
 
+  const forceConfiguredRef = useRef(false);
   useEffect(() => {
-    if (fgRef.current) {
+    if (fgRef.current && !forceConfiguredRef.current && forceGraphData.nodes.length > 0) {
       fgRef.current.d3Force('charge')?.strength(-100);
       fgRef.current.d3Force('link')?.distance(80);
+      forceConfiguredRef.current = true;
     }
-  }, [forceGraphData]);
+  }, [forceGraphData.nodes.length]);
 
   const handleInstantLinkCreate = useCallback(async (link: PendingLink) => {
     try {
@@ -274,22 +320,22 @@ export default function GraphViewer() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen bg-gray-950">
-        <div className="text-lg text-gray-400">Loading graph...</div>
+      <div className="flex items-center justify-center h-screen bg-background">
+        <div className="text-lg text-muted-foreground">Loading graph...</div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="flex items-center justify-center h-screen bg-gray-950">
+      <div className="flex items-center justify-center h-screen bg-background">
         <div className="text-red-500">Error: {error}</div>
       </div>
     );
   }
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-gray-950">
+    <div className="flex h-screen w-screen overflow-hidden bg-background">
       <div 
         ref={containerRef}
         className="flex-1 relative"
@@ -306,10 +352,10 @@ export default function GraphViewer() {
             disabled={!is3DSupported}
             className={`px-4 py-2 rounded text-sm font-medium transition-colors ${
               !is3DSupported 
-                ? 'bg-gray-700 text-gray-500 cursor-not-allowed' 
+                ? 'bg-muted text-muted-foreground cursor-not-allowed' 
                 : is3D 
-                  ? 'bg-purple-600 hover:bg-purple-700 text-white' 
-                  : 'bg-gray-800 hover:bg-gray-700 text-gray-200'
+                  ? 'bg-foreground text-background hover:bg-foreground/90' 
+                  : 'bg-card hover:bg-accent text-card-foreground'
             }`}
             title={!is3DSupported ? '3D not supported on this browser' : ''}
           >
@@ -333,18 +379,18 @@ export default function GraphViewer() {
         )}
 
         {dragLink && (
-          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 px-4 py-2 bg-green-900/90 rounded text-sm text-white">
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 px-4 py-2 bg-card/90 rounded text-sm text-foreground border border-border">
             Drag to another node to create link
           </div>
         )}
 
         {!isMobile && (
-          <div className="absolute bottom-4 left-4 z-10 p-3 bg-gray-900/90 rounded text-xs text-gray-300 max-w-xs">
-            <div className="font-semibold mb-1">Controls</div>
+          <div className="absolute bottom-4 left-4 z-10 p-3 bg-panel/90 rounded text-xs text-muted-foreground max-w-xs">
+            <div className="font-semibold mb-1 text-foreground">Controls</div>
             <div>Click node: View details</div>
             <div>Drag node center: Move node</div>
-            {!is3D && <div className="text-green-400">Drag from ring: Create link</div>}
-            {is3D && <div className="text-yellow-400 mt-1">Drag to rotate, scroll to zoom</div>}
+            {!is3D && <div className="text-foreground">Drag from ring: Create link</div>}
+            {is3D && <div className="text-foreground mt-1">Drag to rotate, scroll to zoom</div>}
           </div>
         )}
 
@@ -356,7 +402,7 @@ export default function GraphViewer() {
                   <div className="text-red-400 mb-2">3D mode not supported on this browser</div>
                   <button
                     onClick={() => setIs3D(false)}
-                    className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded text-white text-sm"
+                    className="px-4 py-2 bg-card hover:bg-accent rounded text-foreground text-sm"
                   >
                     Switch to 2D
                   </button>
@@ -415,7 +461,12 @@ export default function GraphViewer() {
         <NodeDetailPanel
           node={selectedNode}
           onClose={() => setSelectedNode(null)}
-          onUpdate={() => fetchGraphData()}
+          onUpdate={(updatedNode?: Node) => {
+            if (updatedNode) {
+              updateNodeInPlace(updatedNode);
+              setSelectedNode(updatedNode);
+            }
+          }}
           onDelete={() => {
             const nodeId = selectedNode.id;
             setGraphData(prev => {

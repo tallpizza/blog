@@ -2,36 +2,20 @@
 
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { api } from '@/lib/api-client';
+import { api, GraphData } from '@/lib/api-client';
 
 interface RelationshipFormData {
-  order_id: number;
-  product_id: number;
+  order_id: string;
+  product_id: string;
   quantity: number;
   price: number;
-}
-
-interface GraphNode {
-  id: number;
-  labels: string[];
-  properties: Record<string, unknown>;
-}
-
-interface GraphData {
-  nodes: GraphNode[];
-  relationships: Array<{
-    id: number;
-    type: string;
-    startNode: number;
-    endNode: number;
-  }>;
 }
 
 export default function RelationshipPanel() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [formData, setFormData] = useState<RelationshipFormData>({
-    order_id: 0,
-    product_id: 0,
+    order_id: '',
+    product_id: '',
     quantity: 1,
     price: 0,
   });
@@ -49,8 +33,8 @@ export default function RelationshipPanel() {
   const createRelMutation = useMutation({
     mutationFn: async (data: RelationshipFormData) => {
       return api.createRelationship({
-        startNodeId: String(data.order_id),
-        endNodeId: String(data.product_id),
+        startNodeId: data.order_id,
+        endNodeId: data.product_id,
         type: 'CONTAINS',
         properties: { quantity: data.quantity, price: data.price },
       });
@@ -58,7 +42,7 @@ export default function RelationshipPanel() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['graph'] });
       setIsFormOpen(false);
-      setFormData({ order_id: 0, product_id: 0, quantity: 1, price: 0 });
+      setFormData({ order_id: '', product_id: '', quantity: 1, price: 0 });
     },
   });
 
@@ -101,14 +85,14 @@ export default function RelationshipPanel() {
               <select
                 data-testid="rel-order"
                 value={formData.order_id}
-                onChange={(e) => setFormData({ ...formData, order_id: parseInt(e.target.value) })}
+                onChange={(e) => setFormData({ ...formData, order_id: e.target.value })}
                 className="w-full px-3 py-2 border rounded-lg"
                 required
               >
-                <option value={0}>Select Order...</option>
+                <option value="">Select Order...</option>
                 {orders.map(order => (
-                  <option key={order.id} value={order.properties.id as number}>
-                    Order #{String(order.properties.id)}
+                  <option key={order.id} value={order.id}>
+                    Order #{order.id}
                   </option>
                 ))}
               </select>
@@ -119,14 +103,14 @@ export default function RelationshipPanel() {
               <select
                 data-testid="rel-product"
                 value={formData.product_id}
-                onChange={(e) => setFormData({ ...formData, product_id: parseInt(e.target.value) })}
+                onChange={(e) => setFormData({ ...formData, product_id: e.target.value })}
                 className="w-full px-3 py-2 border rounded-lg"
                 required
               >
-                <option value={0}>Select Product...</option>
+                <option value="">Select Product...</option>
                 {products.map(product => (
-                  <option key={product.id} value={product.properties.id as number}>
-                    {product.properties.name as string || `Product #${product.properties.id}`}
+                  <option key={product.id} value={product.id}>
+                    {String(product.properties.name || product.properties.text || `Product #${product.id}`)}
                   </option>
                 ))}
               </select>

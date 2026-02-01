@@ -87,28 +87,28 @@ export function RelationshipDetailPanel({
   const content = (
     <div className="space-y-3">
       <div>
-        <div className="text-sm font-medium text-gray-400">Type</div>
-        <div className="text-lg text-white">{relationship.type}</div>
+        <div className="text-sm font-medium text-muted-foreground">Type</div>
+        <div className="text-lg text-foreground">{relationship.type}</div>
       </div>
 
       <div>
-        <div className="text-sm font-medium text-gray-400">From Node</div>
-        <div className="text-gray-200 text-sm truncate">{relationship.startNode}</div>
+        <div className="text-sm font-medium text-muted-foreground">From Node</div>
+        <div className="text-foreground text-sm truncate">{relationship.startNode}</div>
       </div>
 
       <div>
-        <div className="text-sm font-medium text-gray-400">To Node</div>
-        <div className="text-gray-200 text-sm truncate">{relationship.endNode}</div>
+        <div className="text-sm font-medium text-muted-foreground">To Node</div>
+        <div className="text-foreground text-sm truncate">{relationship.endNode}</div>
       </div>
 
       <div>
         <div className="flex justify-between items-center mb-2">
-          <div className="text-sm font-medium text-gray-400">Properties</div>
+          <div className="text-sm font-medium text-muted-foreground">Properties</div>
           {!isEditing && (
             <button
               data-testid="edit-rel-btn"
               onClick={() => setIsEditing(true)}
-              className="text-xs px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded"
+              className="text-xs px-2 py-1 bg-accent hover:bg-muted text-foreground rounded"
             >
               Edit
             </button>
@@ -117,9 +117,9 @@ export function RelationshipDetailPanel({
 
         <div className="space-y-2">
           {Object.entries(editedProperties).map(([key, value]) => (
-            <div key={key} className="border-b border-gray-800 pb-2">
+            <div key={key} className="border-b border-border pb-2">
               <div className="flex justify-between items-center">
-                <div className="text-xs text-gray-500">{key}</div>
+                <div className="text-xs text-muted-foreground">{key}</div>
                 {isEditing && (
                   <button
                     onClick={() => handleRemoveProperty(key)}
@@ -132,42 +132,42 @@ export function RelationshipDetailPanel({
               {isEditing ? (
                 <input
                   type={typeof relationship.properties[key] === 'number' ? 'number' : 'text'}
-                  value={value ?? ''}
+                  value={typeof value === 'object' ? JSON.stringify(value) : String(value ?? '')}
                   onChange={(e) => handlePropertyChange(key, e.target.value)}
                   step={typeof relationship.properties[key] === 'number' ? '0.01' : undefined}
-                  className="w-full px-2 py-1 bg-gray-800 border border-gray-700 rounded text-sm text-white focus:outline-none focus:border-blue-500"
+                  className="w-full px-2 py-1 bg-input border border-border rounded text-sm text-foreground focus:outline-none focus:border-foreground"
                 />
               ) : (
-                <div className="text-sm text-gray-200">{String(value)}</div>
+                <div className="text-sm text-foreground">{String(value)}</div>
               )}
             </div>
           ))}
 
           {Object.keys(editedProperties).length === 0 && !isEditing && (
-            <div className="text-gray-500 text-sm italic">No properties</div>
+            <div className="text-muted-foreground text-sm italic">No properties</div>
           )}
 
           {isEditing && (
-            <div className="border-t border-gray-700 pt-3">
-              <div className="text-xs text-gray-500 mb-2">Add Property</div>
+            <div className="border-t border-border pt-3">
+              <div className="text-xs text-muted-foreground mb-2">Add Property</div>
               <div className="flex gap-2">
                 <input
                   type="text"
                   placeholder="Key"
                   value={newPropKey}
                   onChange={(e) => setNewPropKey(e.target.value)}
-                  className="flex-1 px-2 py-1 bg-gray-800 border border-gray-700 rounded text-sm text-white"
+                  className="flex-1 px-2 py-1 bg-input border border-border rounded text-sm text-foreground"
                 />
                 <input
                   type="text"
                   placeholder="Value"
                   value={newPropValue}
                   onChange={(e) => setNewPropValue(e.target.value)}
-                  className="flex-1 px-2 py-1 bg-gray-800 border border-gray-700 rounded text-sm text-white"
+                  className="flex-1 px-2 py-1 bg-input border border-border rounded text-sm text-foreground"
                 />
                 <button
                   onClick={handleAddProperty}
-                  className="px-2 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-sm"
+                  className="px-2 py-1 bg-accent hover:bg-muted text-foreground rounded text-sm"
                 >
                   +
                 </button>
@@ -189,14 +189,14 @@ export function RelationshipDetailPanel({
             data-testid="save-rel-btn"
             onClick={handleSave}
             disabled={saving}
-            className="flex-1 px-3 py-2 bg-green-600 hover:bg-green-700 disabled:bg-green-800 text-white text-sm rounded"
+            className="flex-1 px-3 py-2 bg-foreground hover:bg-foreground/90 disabled:bg-muted text-background text-sm rounded"
           >
             {saving ? 'Saving...' : 'Save'}
           </button>
           <button
             onClick={handleCancel}
             disabled={saving}
-            className="flex-1 px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white text-sm rounded"
+            className="flex-1 px-3 py-2 bg-accent hover:bg-muted text-foreground text-sm rounded"
           >
             Cancel
           </button>
@@ -207,7 +207,7 @@ export function RelationshipDetailPanel({
         data-testid="delete-rel-btn"
         onClick={onDelete}
         disabled={deleting || isEditing}
-        className="w-full mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:bg-gray-600"
+        className="w-full mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:bg-muted disabled:text-muted-foreground"
       >
         {deleting ? 'Deleting...' : 'Delete Relationship'}
       </button>
@@ -223,10 +223,10 @@ export function RelationshipDetailPanel({
   }
 
   return (
-    <div className="fixed top-0 right-0 h-full w-80 max-w-[90vw] bg-gray-900 border-l border-gray-800 p-4 overflow-y-auto z-40">
+    <div className="fixed top-0 right-0 h-full w-80 max-w-[90vw] bg-panel border-l border-border p-4 overflow-y-auto z-40">
       <div className="flex justify-between items-start mb-4">
-        <h2 className="text-xl font-bold text-white">Relationship</h2>
-        <button onClick={onClose} className="text-gray-400 hover:text-white text-xl">✕</button>
+        <h2 className="text-xl font-bold text-foreground">Relationship</h2>
+        <button onClick={onClose} className="text-muted-foreground hover:text-foreground text-xl">✕</button>
       </div>
       {content}
     </div>

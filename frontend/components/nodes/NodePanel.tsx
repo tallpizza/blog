@@ -10,7 +10,7 @@ interface NodePanelProps {
 
 export default function NodePanel({ onNodeCreated }: NodePanelProps) {
   const createNodeMutation = useMutation({
-    mutationFn: () => api.createNode({ name: 'New Node' }),
+    mutationFn: () => api.createNode({ text: '' }),
     onSuccess: (data) => {
       onNodeCreated?.(data as Node);
     },
