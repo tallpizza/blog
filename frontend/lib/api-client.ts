@@ -46,8 +46,15 @@ export interface GraphData {
   relationships: GraphRelationship[];
 }
 
+export type LabelColors = Record<string, string>;
+
 export const api = {
   getGraph: () => executeQuery<GraphData>('getGraph'),
+
+  getLabelColors: () => executeQuery<LabelColors>('getLabelColors'),
+
+  setLabelColors: (labelColors: LabelColors) =>
+    executeQuery<LabelColors>('setLabelColors', { labelColors: JSON.stringify(labelColors) }),
 
   createNode: (params: { type?: string; [key: string]: unknown }) =>
     executeQuery<GraphNode>('createNode', params),

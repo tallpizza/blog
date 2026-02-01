@@ -3,9 +3,10 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import { Node as GraphNode } from '../types';
-import { LABEL_COLORS, DEFAULT_LABELS } from '../constants';
+import { DEFAULT_LABELS } from '../constants';
 import { BottomSheet } from './BottomSheet';
 import { api } from '@/lib/api-client';
+import { useLabelColors } from '@/components/providers/LabelColorProvider';
 
 const ObsidianEditor = dynamic(
   () => import('./ObsidianEditor').then((mod) => mod.ObsidianEditor),
@@ -25,9 +26,10 @@ interface LabelComboboxProps {
   onChange: (value: string) => void;
   existingLabels: string[];
   placeholder?: string;
+  getColor: (label: string) => string;
 }
 
-function LabelCombobox({ value, onChange, existingLabels, placeholder }: LabelComboboxProps) {
+function LabelCombobox({ value, onChange, existingLabels, placeholder, getColor }: LabelComboboxProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [inputValue, setInputValue] = useState(value);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -99,7 +101,7 @@ function LabelCombobox({ value, onChange, existingLabels, placeholder }: LabelCo
             >
               <span
                 className="w-3 h-3 rounded-full"
-                style={{ backgroundColor: LABEL_COLORS[label] || '#6B7280' }}
+                style={{ backgroundColor: getColor(label) }}
               />
               {label}
             </button>
@@ -118,7 +120,15 @@ function LabelCombobox({ value, onChange, existingLabels, placeholder }: LabelCo
   );
 }
 
+const PRESET_COLORS = [
+  '#EF4444', '#F97316', '#F59E0B', '#EAB308', '#84CC16',
+  '#22C55E', '#10B981', '#14B8A6', '#06B6D4', '#0EA5E9',
+  '#3B82F6', '#6366F1', '#8B5CF6', '#A855F7', '#D946EF',
+  '#EC4899', '#F43F5E', '#6B7280', '#374151', '#FFFFFF',
+];
+
 export function NodeDetailPanel({ node, onClose, onUpdate, onDelete, isMobile }: Props) {
+  const { getColor, setColor } = useLabelColors();
   const [editedText, setEditedText] = useState<string>('');
   const [editedProperties, setEditedProperties] = useState<Record<string, unknown>>({});
   const [newLabel, setNewLabel] = useState('');
@@ -128,13 +138,22 @@ export function NodeDetailPanel({ node, onClose, onUpdate, onDelete, isMobile }:
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [colorPickerLabel, setColorPickerLabel] = useState<string | null>(null);
   
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const initialLoadRef = useRef(true);
+  const lastNodeIdRef = useRef<string | null>(null);
+  const originalTextRef = useRef<string>('');
+  const originalPropertiesRef = useRef<Record<string, unknown>>({});
 
   useEffect(() => {
+    if (lastNodeIdRef.current === node.id) return;
+    
+    lastNodeIdRef.current = node.id;
     const { text, ...otherProps } = node.properties as { text?: string; [key: string]: unknown };
-    setEditedText(typeof text === 'string' ? text : '');
+    const textValue = typeof text === 'string' ? text : '';
+    
+    setEditedText(textValue);
     setEditedProperties(otherProps);
     setNewLabel('');
     setNewPropKey('');
@@ -142,9 +161,31 @@ export function NodeDetailPanel({ node, onClose, onUpdate, onDelete, isMobile }:
     setError(null);
     setSaveStatus('idle');
     initialLoadRef.current = true;
+    
+    originalTextRef.current = textValue;
+    originalPropertiesRef.current = otherProps;
   }, [node]);
 
+  const hasChanges = useCallback(() => {
+    if (newLabel) return true;
+    if (editedText !== originalTextRef.current) return true;
+    
+    const origKeys = Object.keys(originalPropertiesRef.current);
+    const editKeys = Object.keys(editedProperties);
+    if (origKeys.length !== editKeys.length) return true;
+    
+    for (const key of editKeys) {
+      if (editedProperties[key] !== originalPropertiesRef.current[key]) return true;
+    }
+    return false;
+  }, [editedText, editedProperties, newLabel]);
+
   const doSave = useCallback(async () => {
+    if (!hasChanges()) {
+      setSaveStatus('idle');
+      return;
+    }
+    
     setSaveStatus('saving');
     setError(null);
     try {
@@ -157,9 +198,12 @@ export function NodeDetailPanel({ node, onClose, onUpdate, onDelete, isMobile }:
         updateData.addLabel = labelToAdd;
       }
 
-      const result = await api.updateNode(node.id, updateData);
+      await api.updateNode(node.id, updateData);
       setNewLabel('');
       setSaveStatus('saved');
+      
+      originalTextRef.current = editedText;
+      originalPropertiesRef.current = { ...editedProperties };
       
       const updatedNode: GraphNode = {
         id: node.id,
@@ -173,7 +217,7 @@ export function NodeDetailPanel({ node, onClose, onUpdate, onDelete, isMobile }:
       setError(err instanceof Error ? err.message : 'Unknown error');
       setSaveStatus('error');
     }
-  }, [editedText, editedProperties, newLabel, node.id, node.labels, onUpdate]);
+  }, [editedText, editedProperties, newLabel, node.id, node.labels, onUpdate, hasChanges]);
 
   useEffect(() => {
     if (initialLoadRef.current) {
@@ -232,6 +276,14 @@ export function NodeDetailPanel({ node, onClose, onUpdate, onDelete, isMobile }:
     setNewPropValue('');
   };
 
+  const handleDeleteProperty = (key: string) => {
+    if (!confirm(`Delete property "${key}"?`)) return;
+    setEditedProperties((prev) => {
+      const { [key]: _, ...rest } = prev;
+      return rest;
+    });
+  };
+
   const handleLabelSelect = (label: string) => {
     setNewLabel(label);
   };
@@ -251,13 +303,32 @@ export function NodeDetailPanel({ node, onClose, onUpdate, onDelete, isMobile }:
         <div className="flex flex-wrap gap-2 mb-2">
           {node.labels.length > 0 ? (
             node.labels.map((label) => (
-              <span
-                key={label}
-                className="px-2 py-1 rounded text-sm text-white"
-                style={{ backgroundColor: LABEL_COLORS[label] || '#6B7280' }}
-              >
-                {label}
-              </span>
+              <div key={label} className="relative">
+                <button
+                  onClick={() => setColorPickerLabel(colorPickerLabel === label ? null : label)}
+                  className="px-2 py-1 rounded text-sm text-white hover:opacity-80 transition-opacity"
+                  style={{ backgroundColor: getColor(label) }}
+                >
+                  {label}
+                </button>
+                {colorPickerLabel === label && (
+                  <div className="absolute top-full left-0 mt-2 p-2 bg-popover border border-border rounded-lg shadow-lg z-50">
+                    <div className="grid grid-cols-5 gap-1">
+                      {PRESET_COLORS.map((color) => (
+                        <button
+                          key={color}
+                          onClick={() => {
+                            setColor(label, color);
+                            setColorPickerLabel(null);
+                          }}
+                          className="w-6 h-6 rounded border border-border hover:scale-110 transition-transform"
+                          style={{ backgroundColor: color }}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
             ))
           ) : (
             <span className="text-muted-foreground text-sm italic">No labels</span>
@@ -269,6 +340,7 @@ export function NodeDetailPanel({ node, onClose, onUpdate, onDelete, isMobile }:
           onChange={handleLabelSelect}
           existingLabels={node.labels}
           placeholder="Add label..."
+          getColor={getColor}
         />
         {newLabel && (
           <div className="mt-2 text-xs text-muted-foreground">
@@ -312,13 +384,21 @@ export function NodeDetailPanel({ node, onClose, onUpdate, onDelete, isMobile }:
                     {Object.entries(editedProperties).map(([key, value]) => (
                       <div key={key}>
                         <label className="text-xs text-muted-foreground block mb-1">{key}</label>
-                        <input
-                          type={typeof node.properties[key] === 'number' ? 'number' : 'text'}
-                          value={String(value ?? '')}
-                          onChange={(e) => handlePropertyChange(key, e.target.value)}
-                          step={typeof node.properties[key] === 'number' ? '0.01' : undefined}
-                          className="w-full px-2 py-1 bg-input border border-border rounded text-sm text-foreground focus:outline-none focus:border-foreground"
-                        />
+                        <div className="flex gap-2">
+                          <input
+                            type={typeof node.properties[key] === 'number' ? 'number' : 'text'}
+                            value={String(value ?? '')}
+                            onChange={(e) => handlePropertyChange(key, e.target.value)}
+                            step={typeof node.properties[key] === 'number' ? '0.01' : undefined}
+                            className="flex-1 px-2 py-1 bg-input border border-border rounded text-sm text-foreground focus:outline-none focus:border-foreground"
+                          />
+                          <button
+                            onClick={() => handleDeleteProperty(key)}
+                            className="px-2 py-1 text-red-400 hover:text-red-300 hover:bg-red-900/30 rounded text-sm transition-colors"
+                          >
+                            ✕
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>

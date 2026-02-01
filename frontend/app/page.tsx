@@ -2,6 +2,7 @@
 
 import dynamic from 'next/dynamic';
 import QueryProvider from '@/components/providers/QueryProvider';
+import { LabelColorProvider } from '@/components/providers/LabelColorProvider';
 
 const GraphViewer = dynamic(() => import('@/components/graph/GraphViewer'), {
   ssr: false,
@@ -11,7 +12,9 @@ const GraphViewer = dynamic(() => import('@/components/graph/GraphViewer'), {
 export default function Home() {
   return (
     <QueryProvider>
-      <GraphViewer />
+      <LabelColorProvider>
+        <GraphViewer />
+      </LabelColorProvider>
     </QueryProvider>
   );
 }

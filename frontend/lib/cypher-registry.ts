@@ -97,10 +97,12 @@ export const QUERY_REGISTRY = {
   // ---------------------------------------------------------------------------
   
   getGraph: {
-    description: 'Get all nodes and relationships in the graph',
+    description: 'Get all nodes and relationships in the graph (excluding Config nodes)',
     cypher: `
       MATCH (n)
+      WHERE NOT 'Config' IN labels(n)
       OPTIONAL MATCH (n)-[r]->(m)
+      WHERE NOT 'Config' IN labels(m)
       RETURN 
         collect(DISTINCT {
           id: elementId(n),
@@ -123,6 +125,53 @@ export const QUERY_REGISTRY = {
         nodes: toNativeTypes(record.nodes.filter((n) => (n as { id?: unknown })?.id !== null)),
         relationships: toNativeTypes(record.relationships.filter((r) => (r as { id?: unknown })?.id !== null)),
       };
+    },
+  },
+
+  // ---------------------------------------------------------------------------
+  // Config Queries
+  // ---------------------------------------------------------------------------
+
+  getLabelColors: {
+    description: 'Get label colors from Config node',
+    cypher: `
+      MATCH (c:Config)
+      RETURN c.labelColors as labelColors
+    `,
+    validate: (_params: unknown): _params is Record<string, never> => true,
+    transform: (records: unknown[]) => {
+      if (!records[0]) return {};
+      const record = records[0] as { labelColors?: string };
+      if (!record.labelColors) return {};
+      try {
+        return JSON.parse(record.labelColors);
+      } catch {
+        return {};
+      }
+    },
+  },
+
+  setLabelColors: {
+    description: 'Set all label colors in Config node (creates Config if not exists)',
+    cypher: `
+      MERGE (c:Config)
+      SET c.labelColors = $labelColors
+      RETURN c.labelColors as labelColors
+    `,
+    validate: (params: unknown): params is { labelColors: string } => {
+      if (!isObject(params)) return false;
+      if (!isString(params.labelColors)) return false;
+      return true;
+    },
+    transform: (records: unknown[]) => {
+      if (!records[0]) return {};
+      const record = records[0] as { labelColors?: string };
+      if (!record.labelColors) return {};
+      try {
+        return JSON.parse(record.labelColors);
+      } catch {
+        return {};
+      }
     },
   },
 

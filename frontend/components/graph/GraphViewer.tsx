@@ -7,10 +7,11 @@ import { GraphData, Node, Relationship, PendingLink, ForceGraphData } from './ty
 import { Graph3DErrorBoundary } from './Graph3DErrorBoundary';
 import { NodeDetailPanel, RelationshipDetailPanel, SearchPanel, UndoRedoButtons } from './panels';
 import { useRingLinkCreation, useGraphRendering, useUndoRedo, parseMarkdownLabel } from './hooks';
-import { getNodeCaption, getNodeColor } from './utils';
+import { getNodeCaption } from './utils';
 import SpriteText from 'three-spritetext';
 import NodePanel from '@/components/nodes/NodePanel';
 import { api } from '@/lib/api-client';
+import { useLabelColors } from '@/components/providers/LabelColorProvider';
 
 const ForceGraph2D = dynamic(() => import('react-force-graph-2d'), { ssr: false });
 const ForceGraph3D = dynamic(() => import('react-force-graph-3d'), { ssr: false });
@@ -18,6 +19,7 @@ const ForceGraph3D = dynamic(() => import('react-force-graph-3d'), { ssr: false 
 export default function GraphViewer() {
   const fgRef = useRef<any>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const { getColor, colors } = useLabelColors();
   
   const [graphData, setGraphData] = useState<GraphData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -77,10 +79,10 @@ export default function GraphViewer() {
     if (nodeToUpdate) {
       nodeToUpdate.label = getNodeCaption(updatedNode);
       nodeToUpdate.labels = updatedNode.labels;
-      nodeToUpdate.color = getNodeColor(updatedNode.labels[0]);
+      nodeToUpdate.color = getColor(updatedNode.labels[0]);
       nodeToUpdate.originalNode = updatedNode;
     }
-  }, []);
+  }, [getColor]);
 
   const forceGraphData: ForceGraphData = useMemo(() => {
     if (!graphData) return forceGraphDataRef.current;
@@ -106,7 +108,7 @@ export default function GraphViewer() {
       if (existing) {
         existing.label = getNodeCaption(node);
         existing.labels = node.labels;
-        existing.color = getNodeColor(node.labels[0]);
+        existing.color = getColor(node.labels[0]);
         existing.originalNode = node;
         return existing;
       }
@@ -114,7 +116,7 @@ export default function GraphViewer() {
         id: nodeId,
         label: getNodeCaption(node),
         labels: node.labels,
-        color: getNodeColor(node.labels[0]),
+        color: getColor(node.labels[0]),
         originalNode: node,
       };
     });
@@ -129,7 +131,13 @@ export default function GraphViewer() {
 
     forceGraphDataRef.current = { nodes, links };
     return forceGraphDataRef.current;
-  }, [graphData]);
+  }, [graphData, getColor]);
+
+  useEffect(() => {
+    forceGraphDataRef.current.nodes.forEach(node => {
+      node.color = getColor(node.labels[0]);
+    });
+  }, [colors, getColor]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
