@@ -133,6 +133,12 @@ export function useGraphRendering({
     ctx.fill();
     ctx.globalAlpha = 1;
     
+    if (isSelected) {
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 1 / globalScale;
+      ctx.stroke();
+    }
+    
     if (isHighlighted && !isHovered && !isSelected) {
       ctx.strokeStyle = '#fbbf24';
       ctx.lineWidth = 2 / globalScale;
