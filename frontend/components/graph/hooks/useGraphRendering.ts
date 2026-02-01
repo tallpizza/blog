@@ -2,6 +2,44 @@ import { useCallback, useMemo } from 'react';
 import { DragLink, ForceGraphLink, ForceGraphNode, Node } from '../types';
 import { NODE_RADIUS, RING_INNER, RING_OUTER } from '../constants';
 
+interface ParsedLabel {
+  text: string;
+  fontWeight: string;
+  fontStyle: string;
+  sizeMultiplier: number;
+}
+
+function parseMarkdownLabel(label: string): ParsedLabel {
+  let text = label;
+  let fontWeight = 'normal';
+  let fontStyle = 'normal';
+  let sizeMultiplier = 1;
+
+  if (text.startsWith('### ')) {
+    text = text.slice(4);
+    fontWeight = 'bold';
+    sizeMultiplier = 1.1;
+  } else if (text.startsWith('## ')) {
+    text = text.slice(3);
+    fontWeight = 'bold';
+    sizeMultiplier = 1.3;
+  } else if (text.startsWith('# ')) {
+    text = text.slice(2);
+    fontWeight = 'bold';
+    sizeMultiplier = 1.5;
+  }
+
+  if (text.startsWith('**') && text.endsWith('**') && text.length > 4) {
+    text = text.slice(2, -2);
+    fontWeight = 'bold';
+  } else if (text.startsWith('*') && text.endsWith('*') && text.length > 2 && !text.startsWith('**')) {
+    text = text.slice(1, -1);
+    fontStyle = 'italic';
+  }
+
+  return { text, fontWeight, fontStyle, sizeMultiplier };
+}
+
 interface UseGraphRenderingProps {
   hoveredNode: any;
   hoveredLink: any;
@@ -37,9 +75,10 @@ export function useGraphRendering({
   }, [hoveredNode, links]);
 
   const nodeCanvasObject = useCallback((node: any, ctx: CanvasRenderingContext2D, globalScale: number) => {
-    const label = node.label;
-    const fontSize = 12 / globalScale;
-    ctx.font = `${fontSize}px Sans-Serif`;
+    const parsed = parseMarkdownLabel(node.label);
+    const baseFontSize = 12 / globalScale;
+    const fontSize = baseFontSize * parsed.sizeMultiplier;
+    ctx.font = `${parsed.fontStyle} ${parsed.fontWeight} ${fontSize}px Sans-Serif`;
     const nodeRadius = NODE_RADIUS / globalScale;
     const ringInnerScaled = RING_INNER / globalScale;
     const ringOuterScaled = RING_OUTER / globalScale;
@@ -104,7 +143,7 @@ export function useGraphRendering({
     ctx.textBaseline = 'middle';
     ctx.globalAlpha = isDimmed ? 0.4 : 1;
     ctx.fillStyle = isHovered || isSelected || isDragSource ? '#000' : '#fff';
-    ctx.fillText(label, node.x, node.y);
+    ctx.fillText(parsed.text, node.x, node.y);
     ctx.globalAlpha = 1;
   }, [connectedNodeIds, hoveredNode, dragLink, dragTargetNode, selectedNode, ringHovered, highlightedNodeIds]);
 

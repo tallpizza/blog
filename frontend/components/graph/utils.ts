@@ -3,11 +3,17 @@ import { LABEL_COLORS } from './constants';
 
 export function getNodeCaption(node: Node): string {
   const props = node.properties;
+  
+  if (props.text) {
+    const text = String(props.text);
+    const firstLine = text.split('\n')[0].trim();
+    if (firstLine) return firstLine;
+  }
+  
   return (
     (props.name as string) ||
     (props.title as string) ||
-    (props.email as string) ||
-    `${node.labels[0]} ${props.id || node.id}`
+    `${node.labels[0] || 'Node'}`
   );
 }
 
