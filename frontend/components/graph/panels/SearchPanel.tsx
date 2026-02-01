@@ -54,10 +54,10 @@ export function SearchPanel({ nodes, onNodeSelect, onHighlightChange }: Props) {
 
   return (
     <div className="absolute top-4 right-4 z-20">
-      <div className="bg-gray-900/95 backdrop-blur-sm rounded-lg shadow-lg border border-gray-800 overflow-hidden">
+      <div className="bg-panel/95 backdrop-blur-sm rounded-lg shadow-lg border border-border overflow-hidden">
         <div className="flex items-center px-3 py-2">
           <svg 
-            className="w-4 h-4 text-gray-500 mr-2" 
+            className="w-4 h-4 text-muted-foreground mr-2" 
             fill="none" 
             stroke="currentColor" 
             viewBox="0 0 24 24"
@@ -78,12 +78,12 @@ export function SearchPanel({ nodes, onNodeSelect, onHighlightChange }: Props) {
             onFocus={() => setIsExpanded(true)}
             onKeyDown={handleKeyDown}
             data-testid="search-input"
-            className="bg-transparent border-none outline-none text-sm text-white placeholder-gray-500 w-48"
+            className="bg-transparent border-none outline-none text-sm text-foreground placeholder-muted-foreground w-48"
           />
           {query && (
             <button
               onClick={handleClear}
-              className="text-gray-500 hover:text-white ml-2"
+              className="text-muted-foreground hover:text-foreground ml-2"
               data-testid="search-clear"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -94,30 +94,30 @@ export function SearchPanel({ nodes, onNodeSelect, onHighlightChange }: Props) {
         </div>
 
         {isExpanded && query && (
-          <div className="border-t border-gray-800 max-h-64 overflow-y-auto">
+          <div className="border-t border-border max-h-64 overflow-y-auto">
             {matchingNodes.length === 0 ? (
-              <div className="px-3 py-2 text-sm text-gray-500">No matching nodes</div>
+              <div className="px-3 py-2 text-sm text-muted-foreground">No matching nodes</div>
             ) : (
               <>
-                <div className="px-3 py-1 text-xs text-gray-500 bg-gray-800/50">
+                <div className="px-3 py-1 text-xs text-muted-foreground bg-muted/50">
                   {matchingNodes.length} result{matchingNodes.length !== 1 ? 's' : ''}
                 </div>
                 {matchingNodes.map(node => (
                   <button
                     key={node.id}
                     onClick={() => handleResultClick(node.id)}
-                    className="w-full px-3 py-2 text-left hover:bg-gray-800 transition-colors flex items-center gap-2"
+                    className="w-full px-3 py-2 text-left hover:bg-accent transition-colors flex items-center gap-2"
                     data-testid={`search-result-${node.id}`}
                   >
                     <span 
                       className="w-3 h-3 rounded-full flex-shrink-0"
                       style={{ backgroundColor: node.color }}
                     />
-                    <span className="text-sm text-white truncate flex-1">
+                    <span className="text-sm text-foreground truncate flex-1">
                       {node.label}
                     </span>
                     {node.labels.length > 0 && (
-                      <span className="text-xs text-gray-500">
+                      <span className="text-xs text-muted-foreground">
                         {node.labels[0]}
                       </span>
                     )}

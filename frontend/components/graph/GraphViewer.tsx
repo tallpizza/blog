@@ -4,7 +4,6 @@ import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 
 import { GraphData, Node, Relationship, PendingLink, ForceGraphData } from './types';
-import { GRAPH_BACKGROUND } from './constants';
 import { Graph3DErrorBoundary } from './Graph3DErrorBoundary';
 import { NodeDetailPanel, RelationshipDetailPanel, SearchPanel, UndoRedoButtons } from './panels';
 import { useRingLinkCreation, useGraphRendering, useUndoRedo } from './hooks';
@@ -34,8 +33,15 @@ export default function GraphViewer() {
   const [isMobile, setIsMobile] = useState(false);
   const [highlightedNodeIds, setHighlightedNodeIds] = useState<Set<string>>(new Set());
   const [isUndoRedoProcessing, setIsUndoRedoProcessing] = useState(false);
+  const [graphBgColor, setGraphBgColor] = useState('#030712');
   
   const { canUndo, canRedo, pushCommand, undo, redo } = useUndoRedo();
+
+  useEffect(() => {
+    const computedStyle = getComputedStyle(document.documentElement);
+    const bgColor = computedStyle.getPropertyValue('--graph-bg').trim();
+    if (bgColor) setGraphBgColor(bgColor);
+  }, []);
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
@@ -428,7 +434,7 @@ export default function GraphViewer() {
               onLinkClick={handleLinkClick}
               onLinkHover={(link: any) => setHoveredLink(link)}
               onBackgroundClick={handleBackgroundClick}
-              backgroundColor={GRAPH_BACKGROUND}
+              backgroundColor={graphBgColor}
               showNavInfo={false}
             />
           </Graph3DErrorBoundary>
@@ -452,7 +458,7 @@ export default function GraphViewer() {
             d3AlphaDecay={0.05}
             d3VelocityDecay={0.4}
             cooldownTicks={100}
-            backgroundColor={GRAPH_BACKGROUND}
+            backgroundColor={graphBgColor}
           />
         )}
       </div>

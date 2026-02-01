@@ -21,7 +21,7 @@ export default function NodePanel({ onNodeCreated }: NodePanelProps) {
       data-testid="add-node-btn"
       onClick={() => createNodeMutation.mutate()}
       disabled={createNodeMutation.isPending}
-      className="px-4 py-2 bg-blue-600 text-white rounded-lg shadow-lg hover:bg-blue-700 border border-blue-500/40 disabled:bg-blue-400"
+      className="px-4 py-2 bg-foreground text-background rounded-lg shadow-lg hover:bg-foreground/90 border border-border disabled:bg-muted disabled:text-muted-foreground"
     >
       {createNodeMutation.isPending ? 'Creating...' : '+ Add Node'}
     </button>

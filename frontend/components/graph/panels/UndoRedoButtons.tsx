@@ -14,7 +14,7 @@ export function UndoRedoButtons({ canUndo, canRedo, onUndo, onRedo, isProcessing
       <button
         onClick={onUndo}
         disabled={!canUndo || isProcessing}
-        className="p-2 bg-gray-800 hover:bg-gray-700 disabled:bg-gray-900 disabled:text-gray-600 text-gray-300 rounded transition-colors"
+        className="p-2 bg-card hover:bg-accent disabled:bg-muted disabled:text-muted-foreground text-foreground rounded transition-colors"
         title="Undo (Ctrl+Z)"
         data-testid="undo-btn"
       >
@@ -25,7 +25,7 @@ export function UndoRedoButtons({ canUndo, canRedo, onUndo, onRedo, isProcessing
       <button
         onClick={onRedo}
         disabled={!canRedo || isProcessing}
-        className="p-2 bg-gray-800 hover:bg-gray-700 disabled:bg-gray-900 disabled:text-gray-600 text-gray-300 rounded transition-colors"
+        className="p-2 bg-card hover:bg-accent disabled:bg-muted disabled:text-muted-foreground text-foreground rounded transition-colors"
         title="Redo (Ctrl+Shift+Z)"
         data-testid="redo-btn"
       >
