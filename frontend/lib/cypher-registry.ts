@@ -230,6 +230,7 @@ export const QUERY_REGISTRY = {
       const labelClause = type ? `:${type}` : '';
       return `
         CREATE (n${labelClause} ${propsClause})
+        SET n.createdAt = datetime(), n.updatedAt = datetime()
         RETURN n, elementId(n) as nodeId, labels(n) as labels
       `;
     },
@@ -262,6 +263,7 @@ export const QUERY_REGISTRY = {
         WHERE elementId(n) = $nodeId
         ${setLabel}
         ${setClause}
+        SET n.updatedAt = datetime()
         RETURN n, elementId(n) as nodeId, labels(n) as labels
       `;
     },

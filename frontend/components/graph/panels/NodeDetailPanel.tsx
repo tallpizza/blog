@@ -151,7 +151,7 @@ export function NodeDetailPanel({ node, onClose, onUpdate, onDelete, isMobile }:
     if (lastNodeIdRef.current === node.id) return;
     
     lastNodeIdRef.current = node.id;
-    const { text, ...otherProps } = node.properties as { text?: string; [key: string]: unknown };
+    const { text, createdAt: _createdAt, updatedAt: _updatedAt, ...otherProps } = node.properties as { text?: string; createdAt?: unknown; updatedAt?: unknown; [key: string]: unknown };
     const textValue = typeof text === 'string' ? text : '';
     
     setEditedText(textValue);
