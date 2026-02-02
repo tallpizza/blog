@@ -106,7 +106,12 @@ function createObsidianPlugin() {
               }
 
               if (nodeType === 'ListMark') {
-                widgets.push({ from: node.from, to: node.to, deco: hiddenMark });
+                // Only hide unordered list markers (-, *, +), keep ordered list markers (1., 2., etc.) visible
+                const markerText = view.state.sliceDoc(node.from, node.to);
+                const isUnorderedMarker = /^[-*+]$/.test(markerText.trim());
+                if (isUnorderedMarker) {
+                  widgets.push({ from: node.from, to: node.to, deco: hiddenMark });
+                }
               }
 
               if (nodeType === 'LinkMark') {

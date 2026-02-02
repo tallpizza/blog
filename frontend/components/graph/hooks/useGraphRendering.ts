@@ -214,12 +214,13 @@ export function useGraphRendering({
   }, [connectedNodeIds, hoveredLink]);
 
   const nodePointerAreaPaint = useCallback((node: any, color: string, ctx: CanvasRenderingContext2D, globalScale: number) => {
-    const scaledRadius = nodeRadius / globalScale;
+    // Extend hit area to include the ring (ringOuter = nodeRadius + 12)
+    const scaledRadius = ringOuter / globalScale;
     ctx.beginPath();
     ctx.arc(node.x, node.y, scaledRadius, 0, 2 * Math.PI);
     ctx.fillStyle = color;
     ctx.fill();
-  }, [nodeRadius]);
+  }, [ringOuter]);
 
   return {
     nodeCanvasObject,

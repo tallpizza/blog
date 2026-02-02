@@ -51,14 +51,15 @@ export function useRingLinkCreation({
       return fgRef.current?.screen2GraphCoords(canvasX, canvasY) || { x: 0, y: 0 };
     };
 
-    const findNodeAt = (graphX: number, graphY: number) => {
+    const findNodeAt = (graphX: number, graphY: number, maxRadius?: number) => {
+      const searchRadius = maxRadius ?? nodeRadius;
       for (const node of nodes) {
         const n = node as any;
         if (n.x === undefined) continue;
         const dx = n.x - graphX;
         const dy = n.y - graphY;
         const dist = Math.sqrt(dx * dx + dy * dy);
-        if (dist < nodeRadius) return { node, dist };
+        if (dist < searchRadius) return { node, dist };
       }
       return null;
     };
@@ -84,20 +85,39 @@ export function useRingLinkCreation({
     const handlePointerDown = (clientX: number, clientY: number, e: Event) => {
       if (!fgRef.current) return;
       
-      const { x: graphX, y: graphY } = getGraphCoords(clientX, clientY);
-      const found = findNodeAt(graphX, graphY);
+      const canvas = container.querySelector('canvas');
+      if (!canvas) return;
       
-      if (!found) return;
+      const rect = canvas.getBoundingClientRect();
       
-      if (isInRing(found.node, clientX, clientY)) {
-        e.stopPropagation();
-        e.preventDefault();
-        isDraggingLinkRef.current = true;
-        setDragLink({
-          sourceNode: found.node,
-          mouseX: graphX,
-          mouseY: graphY,
-        });
+      // Find node whose ring area contains the click (using screen coordinates)
+      for (const node of nodes) {
+        const n = node as any;
+        if (n.x === undefined || n.y === undefined) continue;
+        
+        const nodeScreenCoords = fgRef.current?.graph2ScreenCoords(n.x, n.y);
+        if (!nodeScreenCoords) continue;
+        
+        const nodeScreenX = rect.left + nodeScreenCoords.x;
+        const nodeScreenY = rect.top + nodeScreenCoords.y;
+        
+        const dx = clientX - nodeScreenX;
+        const dy = clientY - nodeScreenY;
+        const screenDist = Math.sqrt(dx * dx + dy * dy);
+        
+        // Check if click is in the ring area (between ringInner and ringOuter)
+        if (screenDist >= ringInner && screenDist <= ringOuter) {
+          e.stopPropagation();
+          e.preventDefault();
+          isDraggingLinkRef.current = true;
+          const { x: graphX, y: graphY } = getGraphCoords(clientX, clientY);
+          setDragLink({
+            sourceNode: node,
+            mouseX: graphX,
+            mouseY: graphY,
+          });
+          return;
+        }
       }
     };
 
@@ -169,11 +189,41 @@ export function useRingLinkCreation({
     const handleMouseMoveForRing = (e: MouseEvent) => {
       if (isDraggingLinkRef.current || !fgRef.current) return;
       
-      const { x: graphX, y: graphY } = getGraphCoords(e.clientX, e.clientY);
-      const found = findNodeAt(graphX, graphY);
+      const canvas = container.querySelector('canvas');
+      if (!canvas) {
+        setRingHovered(false);
+        return;
+      }
       
-      if (found) {
-        setRingHovered(isInRing(found.node, e.clientX, e.clientY));
+      const rect = canvas.getBoundingClientRect();
+      
+      // Find nearest node using screen coordinates
+      let nearestNode: any = null;
+      let nearestScreenDist = Infinity;
+      
+      for (const node of nodes) {
+        const n = node as any;
+        if (n.x === undefined || n.y === undefined) continue;
+        
+        const nodeScreenCoords = fgRef.current?.graph2ScreenCoords(n.x, n.y);
+        if (!nodeScreenCoords) continue;
+        
+        const nodeScreenX = rect.left + nodeScreenCoords.x;
+        const nodeScreenY = rect.top + nodeScreenCoords.y;
+        
+        const dx = e.clientX - nodeScreenX;
+        const dy = e.clientY - nodeScreenY;
+        const screenDist = Math.sqrt(dx * dx + dy * dy);
+        
+        // Check if cursor is within ring's outer radius (in screen pixels)
+        if (screenDist <= ringOuter && screenDist < nearestScreenDist) {
+          nearestScreenDist = screenDist;
+          nearestNode = n;
+        }
+      }
+      
+      if (nearestNode && nearestScreenDist >= ringInner && nearestScreenDist <= ringOuter) {
+        setRingHovered(true);
       } else {
         setRingHovered(false);
       }
