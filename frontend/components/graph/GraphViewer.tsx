@@ -500,6 +500,13 @@ export default function GraphViewer() {
             if (updatedNode) {
               updateNodeInPlace(updatedNode);
               setSelectedNode(updatedNode);
+              setGraphData(prev => {
+                if (!prev) return prev;
+                return {
+                  ...prev,
+                  nodes: prev.nodes.map(n => n.id === updatedNode.id ? updatedNode : n),
+                };
+              });
             }
           }}
           onDelete={() => {

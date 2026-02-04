@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import { Node as GraphNode } from '../types';
-import { DEFAULT_LABELS } from '../constants';
 import { BottomSheet } from './BottomSheet';
 import { ResizablePanel } from './ResizablePanel';
 import { api } from '@/lib/api-client';
@@ -13,6 +12,8 @@ const ObsidianEditor = dynamic(
   () => import('./ObsidianEditor').then((mod) => mod.ObsidianEditor),
   { ssr: false }
 );
+
+type ObsidianEditorRef = { setValue: (value: string) => void };
 
 interface Props {
   node: GraphNode;
@@ -26,11 +27,12 @@ interface LabelComboboxProps {
   value: string;
   onChange: (value: string) => void;
   existingLabels: string[];
+  availableLabels: string[];
   placeholder?: string;
   getColor: (label: string) => string;
 }
 
-function LabelCombobox({ value, onChange, existingLabels, placeholder, getColor }: LabelComboboxProps) {
+function LabelCombobox({ value, onChange, existingLabels, availableLabels, placeholder, getColor }: LabelComboboxProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [inputValue, setInputValue] = useState(value);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -52,15 +54,15 @@ function LabelCombobox({ value, onChange, existingLabels, placeholder, getColor 
 
   const filteredLabels = useMemo(() => {
     const searchTerm = inputValue.toLowerCase();
-    return DEFAULT_LABELS.filter(
+    return availableLabels.filter(
       (label) =>
         label.toLowerCase().includes(searchTerm) && !existingLabels.includes(label)
     );
-  }, [inputValue, existingLabels]);
+  }, [inputValue, existingLabels, availableLabels]);
 
   const showCreateOption =
     inputValue.trim() &&
-    !DEFAULT_LABELS.some((l) => l.toLowerCase() === inputValue.toLowerCase()) &&
+    !availableLabels.some((l) => l.toLowerCase() === inputValue.toLowerCase()) &&
     !existingLabels.some((l) => l.toLowerCase() === inputValue.toLowerCase());
 
   const handleSelect = (label: string) => {
@@ -140,12 +142,18 @@ export function NodeDetailPanel({ node, onClose, onUpdate, onDelete, isMobile }:
   const [error, setError] = useState<string | null>(null);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [colorPickerLabel, setColorPickerLabel] = useState<string | null>(null);
+  const [availableLabels, setAvailableLabels] = useState<string[]>([]);
   
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const initialLoadRef = useRef(true);
   const lastNodeIdRef = useRef<string | null>(null);
   const originalTextRef = useRef<string>('');
   const originalPropertiesRef = useRef<Record<string, unknown>>({});
+  const editorRef = useRef<ObsidianEditorRef>(null);
+
+  useEffect(() => {
+    api.getAllLabels().then(setAvailableLabels).catch(console.error);
+  }, []);
 
   useEffect(() => {
     if (lastNodeIdRef.current === node.id) return;
@@ -165,6 +173,8 @@ export function NodeDetailPanel({ node, onClose, onUpdate, onDelete, isMobile }:
     
     originalTextRef.current = textValue;
     originalPropertiesRef.current = otherProps;
+
+    editorRef.current?.setValue(textValue);
   }, [node]);
 
   const hasChanges = useCallback(() => {
@@ -293,6 +303,7 @@ export function NodeDetailPanel({ node, onClose, onUpdate, onDelete, isMobile }:
     <div className="space-y-4">
       <div>
         <ObsidianEditor
+          innerRef={editorRef}
           value={editedText}
           onChange={setEditedText}
           minHeight="200px"
@@ -340,6 +351,7 @@ export function NodeDetailPanel({ node, onClose, onUpdate, onDelete, isMobile }:
           value={newLabel}
           onChange={handleLabelSelect}
           existingLabels={node.labels}
+          availableLabels={availableLabels}
           placeholder="Add label..."
           getColor={getColor}
         />

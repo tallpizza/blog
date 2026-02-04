@@ -67,6 +67,8 @@ export const DEFAULT_GRAPH_SETTINGS: GraphSettings = {
 export const api = {
   getGraph: () => executeQuery<GraphData>('getGraph'),
 
+  getAllLabels: () => executeQuery<string[]>('getAllLabels'),
+
   getLabelColors: () => executeQuery<LabelColors>('getLabelColors'),
 
   setLabelColors: (labelColors: LabelColors) =>

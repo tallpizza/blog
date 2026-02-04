@@ -96,6 +96,21 @@ export const QUERY_REGISTRY = {
   // Graph Queries
   // ---------------------------------------------------------------------------
   
+  getAllLabels: {
+    description: 'Get all labels in the database (excluding Config)',
+    cypher: `
+      CALL db.labels() YIELD label
+      WHERE label <> 'Config'
+      RETURN collect(label) as labels
+    `,
+    validate: (_params: unknown): _params is Record<string, never> => true,
+    transform: (records: unknown[]) => {
+      if (!records[0]) return [];
+      const record = records[0] as { labels: string[] };
+      return record.labels || [];
+    },
+  },
+
   getGraph: {
     description: 'Get all nodes and relationships in the graph (excluding Config nodes)',
     cypher: `

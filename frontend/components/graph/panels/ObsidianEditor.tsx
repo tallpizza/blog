@@ -1,7 +1,7 @@
 'use client';
 
-import { useCallback, useMemo } from 'react';
-import CodeMirror from '@uiw/react-codemirror';
+import React, { useCallback, useMemo, useImperativeHandle, useRef } from 'react';
+import CodeMirror, { ReactCodeMirrorRef } from '@uiw/react-codemirror';
 import { markdown } from '@codemirror/lang-markdown';
 import { 
   EditorView, 
@@ -216,54 +216,73 @@ const obsidianTheme = EditorView.theme({
   },
 });
 
+export interface ObsidianEditorRef {
+  setValue: (value: string) => void;
+}
+
 interface ObsidianEditorProps {
   value: string;
   onChange: (value: string) => void;
   className?: string;
   minHeight?: string;
+  innerRef?: React.RefObject<ObsidianEditorRef | null>;
 }
 
-export function ObsidianEditor({ value, onChange, className, minHeight = '200px' }: ObsidianEditorProps) {
-  const extensions = useMemo(
-    () => [
-      markdown(),
-      syntaxHighlighting(markdownHighlighting),
-      createObsidianPlugin(),
-      obsidianTheme,
-      EditorView.lineWrapping,
-    ],
-    []
-  );
+export function ObsidianEditor({ value, onChange, className, minHeight = '200px', innerRef }: ObsidianEditorProps) {
+  const editorRef = useRef<ReactCodeMirrorRef>(null);
 
-  const handleChange = useCallback(
-    (val: string) => {
-      onChange(val);
+  useImperativeHandle(innerRef, () => ({
+    setValue: (newValue: string) => {
+      const view = editorRef.current?.view;
+      if (view) {
+        view.dispatch({
+          changes: { from: 0, to: view.state.doc.length, insert: newValue },
+        });
+      }
     },
-    [onChange]
-  );
+  }));
 
-  return (
-    <CodeMirror
-      value={value}
-      onChange={handleChange}
-      extensions={extensions}
-      theme="dark"
-      className={`rounded-lg overflow-hidden border border-gray-700 ${className || ''}`}
-      basicSetup={{
-        lineNumbers: false,
-        foldGutter: false,
-        highlightActiveLine: false,
-        highlightSelectionMatches: false,
-        drawSelection: true,
-        bracketMatching: false,
-        closeBrackets: false,
-        autocompletion: false,
-        rectangularSelection: false,
-        crosshairCursor: false,
-        highlightActiveLineGutter: false,
-        indentOnInput: false,
-      }}
-      minHeight={minHeight}
-    />
-  );
-}
+    const extensions = useMemo(
+      () => [
+        markdown(),
+        syntaxHighlighting(markdownHighlighting),
+        createObsidianPlugin(),
+        obsidianTheme,
+        EditorView.lineWrapping,
+      ],
+      []
+    );
+
+    const handleChange = useCallback(
+      (val: string) => {
+        onChange(val);
+      },
+      [onChange]
+    );
+
+    return (
+      <CodeMirror
+        ref={editorRef}
+        value={value}
+        onChange={handleChange}
+        extensions={extensions}
+        theme="dark"
+        className={`rounded-lg overflow-hidden border border-gray-700 ${className || ''}`}
+        basicSetup={{
+          lineNumbers: false,
+          foldGutter: false,
+          highlightActiveLine: false,
+          highlightSelectionMatches: false,
+          drawSelection: true,
+          bracketMatching: false,
+          closeBrackets: false,
+          autocompletion: false,
+          rectangularSelection: false,
+          crosshairCursor: false,
+          highlightActiveLineGutter: false,
+          indentOnInput: false,
+        }}
+        minHeight={minHeight}
+      />
+    );
+  }
