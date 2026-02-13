@@ -150,6 +150,13 @@ export function NodeDetailPanel({ node, onClose, onUpdate, onDelete, isMobile }:
   const originalTextRef = useRef<string>('');
   const originalPropertiesRef = useRef<Record<string, unknown>>({});
   const editorRef = useRef<ObsidianEditorRef>(null);
+  const [pressingLabel, setPressingLabel] = useState<string | null>(null);
+  const [longPressProgress, setLongPressProgress] = useState(0);
+  const longPressStartRef = useRef(0);
+  const longPressRafRef = useRef(0);
+  const longPressActiveRef = useRef(false);
+  const longPressTriggeredRef = useRef(false);
+  const lastTouchTimeRef = useRef(0);
 
   useEffect(() => {
     api.getAllLabels().then(setAvailableLabels).catch(console.error);
@@ -295,6 +302,64 @@ export function NodeDetailPanel({ node, onClose, onUpdate, onDelete, isMobile }:
     });
   };
 
+  const handleRemoveLabel = async (label: string) => {
+    try {
+      const result = await api.removeLabel(node.id, label);
+      if (result) {
+        onUpdate?.(result as unknown as GraphNode);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+    }
+  };
+
+  const startLongPress = (label: string) => {
+    if (longPressActiveRef.current) return;
+    longPressActiveRef.current = true;
+    longPressTriggeredRef.current = false;
+    setPressingLabel(label);
+    setLongPressProgress(0);
+    longPressStartRef.current = performance.now();
+
+    const animate = (now: number) => {
+      const elapsed = now - longPressStartRef.current;
+      const progress = Math.min(elapsed / 1000, 1);
+      setLongPressProgress(progress);
+
+      if (progress < 1) {
+        longPressRafRef.current = requestAnimationFrame(animate);
+      } else {
+        longPressTriggeredRef.current = true;
+        longPressActiveRef.current = false;
+        setPressingLabel(null);
+        setLongPressProgress(0);
+        try { navigator.vibrate?.(50); } catch {}
+        setTimeout(() => {
+          if (confirm('삭제할까요?')) {
+            handleRemoveLabel(label);
+          }
+        }, 10);
+      }
+    };
+
+    longPressRafRef.current = requestAnimationFrame(animate);
+  };
+
+  const cancelLongPress = () => {
+    if (longPressRafRef.current) {
+      cancelAnimationFrame(longPressRafRef.current);
+    }
+    longPressActiveRef.current = false;
+    setPressingLabel(null);
+    setLongPressProgress(0);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (longPressRafRef.current) cancelAnimationFrame(longPressRafRef.current);
+    };
+  }, []);
+
   const handleLabelSelect = (label: string) => {
     setNewLabel(label);
   };
@@ -315,14 +380,47 @@ export function NodeDetailPanel({ node, onClose, onUpdate, onDelete, isMobile }:
         <div className="flex flex-wrap gap-2 mb-2">
           {node.labels.length > 0 ? (
             node.labels.map((label) => (
-              <div key={label} className="relative">
+              <div key={label} className="relative inline-flex items-center justify-center">
                 <button
-                  onClick={() => setColorPickerLabel(colorPickerLabel === label ? null : label)}
-                  className="px-2 py-1 rounded text-sm text-white hover:opacity-80 transition-opacity"
+                  onTouchStart={() => {
+                    lastTouchTimeRef.current = Date.now();
+                    startLongPress(label);
+                  }}
+                  onTouchEnd={cancelLongPress}
+                  onTouchCancel={cancelLongPress}
+                  onTouchMove={cancelLongPress}
+                  onMouseDown={() => {
+                    if (Date.now() - lastTouchTimeRef.current < 500) return;
+                    startLongPress(label);
+                  }}
+                  onMouseUp={cancelLongPress}
+                  onMouseLeave={cancelLongPress}
+                  onClick={() => {
+                    if (longPressTriggeredRef.current) {
+                      longPressTriggeredRef.current = false;
+                      return;
+                    }
+                    setColorPickerLabel(colorPickerLabel === label ? null : label);
+                  }}
+                  className="px-2 py-1 rounded text-sm text-white hover:opacity-80 transition-opacity select-none"
                   style={{ backgroundColor: getColor(label) }}
                 >
                   {label}
                 </button>
+                {pressingLabel === label && longPressProgress > 0 && (
+                  <div
+                    className="absolute pointer-events-none z-10"
+                    style={{
+                      inset: '-3px',
+                      borderRadius: '0.375rem',
+                      background: `conic-gradient(from 0deg, #ffffff ${longPressProgress * 360}deg, rgba(255, 255, 255, 0.15) ${longPressProgress * 360}deg)`,
+                      padding: '2.5px',
+                      WebkitMask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
+                      WebkitMaskComposite: 'xor',
+                      maskComposite: 'exclude' as const,
+                    }}
+                  />
+                )}
                 {colorPickerLabel === label && (
                   <div className="absolute top-full left-0 mt-2 p-2 bg-popover border border-border rounded-lg shadow-lg z-50">
                     <div className="grid grid-cols-5 gap-1">

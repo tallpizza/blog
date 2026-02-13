@@ -177,6 +177,46 @@ export function useGraphRendering({
     ctx.fill();
   }, [dragLink]);
 
+  const linkCanvasObject = useCallback((link: any, ctx: CanvasRenderingContext2D, globalScale: number) => {
+    const source = link.source as any;
+    const target = link.target as any;
+    if (!source.x || !target.x) return;
+
+    const text = link.originalRel?.properties?.text;
+    if (!text) return;
+
+    const firstLine = String(text).split('\n')[0].trim();
+    if (!firstLine) return;
+
+    const parsed = parseMarkdownLabel(firstLine);
+    const midX = (source.x + target.x) / 2;
+    const midY = (source.y + target.y) / 2;
+
+    const fontSize = (10 / globalScale) * parsed.sizeMultiplier;
+    ctx.font = `${parsed.fontWeight} ${fontSize}px Sans-Serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    const textWidth = ctx.measureText(parsed.text).width;
+    const padding = 3 / globalScale;
+    ctx.fillStyle = 'rgba(3, 7, 18, 0.8)';
+    ctx.beginPath();
+    const r = 3 / globalScale;
+    const x = midX - textWidth / 2 - padding;
+    const y = midY - fontSize / 2 - padding;
+    const w = textWidth + padding * 2;
+    const h = fontSize + padding * 2;
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.fill();
+
+    ctx.fillStyle = '#d1d5db';
+    ctx.fillText(parsed.text, midX, midY);
+  }, []);
+
   const linkColor = useCallback((link: any) => {
     const linkId = link.id || `${link.source?.id || link.source}-${link.target?.id || link.target}`;
     const hoveredLinkId = hoveredLink?.id || (hoveredLink ? `${hoveredLink.source?.id || hoveredLink.source}-${hoveredLink.target?.id || hoveredLink.target}` : null);
@@ -228,6 +268,7 @@ export function useGraphRendering({
     onRenderFramePost,
     linkColor,
     linkWidth,
+    linkCanvasObject,
     nodePointerAreaPaint,
   };
 }

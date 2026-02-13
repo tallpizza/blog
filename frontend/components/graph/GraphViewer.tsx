@@ -77,7 +77,7 @@ export default function GraphViewer() {
   const updateNodeInPlace = useCallback((updatedNode: Node) => {
     const nodes = forceGraphDataRef.current.nodes;
     const nodeToUpdate = nodes.find(n => n.id === String(updatedNode.id));
-    
+
     if (nodeToUpdate) {
       nodeToUpdate.label = getNodeCaption(updatedNode);
       nodeToUpdate.labels = updatedNode.labels;
@@ -85,6 +85,14 @@ export default function GraphViewer() {
       nodeToUpdate.originalNode = updatedNode;
     }
   }, [getColor]);
+
+  const updateRelInPlace = useCallback((updatedRel: Relationship) => {
+    const links = forceGraphDataRef.current.links;
+    const linkToUpdate = links.find(l => l.originalRel?.id === updatedRel.id);
+    if (linkToUpdate) {
+      linkToUpdate.originalRel = updatedRel;
+    }
+  }, []);
 
   const forceGraphData: ForceGraphData = useMemo(() => {
     if (!graphData) return forceGraphDataRef.current;
@@ -224,6 +232,7 @@ export default function GraphViewer() {
     onRenderFramePost,
     linkColor,
     linkWidth,
+    linkCanvasObject,
     nodePointerAreaPaint,
   } = useGraphRendering({
     hoveredNode,
@@ -301,10 +310,59 @@ export default function GraphViewer() {
     setSelectedNode(node);
   }, []);
 
-  const handleBackgroundClick = useCallback(() => {
+  const handleBackgroundClick = useCallback((event?: any) => {
+    if (isMobile && event && forceGraphData.links.length > 0 && fgRef.current && containerRef.current) {
+      const canvas = containerRef.current.querySelector('canvas');
+      if (canvas) {
+        const rect = canvas.getBoundingClientRect();
+        const clientX = event.clientX ?? event.pageX;
+        const clientY = event.clientY ?? event.pageY;
+        if (clientX != null && clientY != null) {
+          const screenCoords = { x: clientX - rect.left, y: clientY - rect.top };
+
+          let nearestLink: any = null;
+          let minDist = 30;
+
+          for (const link of forceGraphData.links) {
+            const source = link.source as any;
+            const target = link.target as any;
+            if (source.x === undefined || target.x === undefined) continue;
+
+            const srcScreen = fgRef.current.graph2ScreenCoords(source.x, source.y);
+            const tgtScreen = fgRef.current.graph2ScreenCoords(target.x, target.y);
+
+            const dx = tgtScreen.x - srcScreen.x;
+            const dy = tgtScreen.y - srcScreen.y;
+            const lenSq = dx * dx + dy * dy;
+            let dist: number;
+            if (lenSq === 0) {
+              dist = Math.sqrt((screenCoords.x - srcScreen.x) ** 2 + (screenCoords.y - srcScreen.y) ** 2);
+            } else {
+              let t = ((screenCoords.x - srcScreen.x) * dx + (screenCoords.y - srcScreen.y) * dy) / lenSq;
+              t = Math.max(0, Math.min(1, t));
+              const projX = srcScreen.x + t * dx;
+              const projY = srcScreen.y + t * dy;
+              dist = Math.sqrt((screenCoords.x - projX) ** 2 + (screenCoords.y - projY) ** 2);
+            }
+
+            if (dist < minDist) {
+              minDist = dist;
+              nearestLink = link;
+            }
+          }
+
+          if (nearestLink) {
+            setSelectedNode(null);
+            setSelectedRel(nearestLink.originalRel);
+            return;
+          }
+        }
+      }
+    }
+
     setSelectedNode(null);
     setSelectedRel(null);
-  }, []);
+  }, [isMobile, forceGraphData.links]);
 
   const handleSearchSelect = useCallback((nodeId: string) => {
     const node = graphData?.nodes.find(n => n.id === nodeId);
@@ -476,6 +534,8 @@ export default function GraphViewer() {
             enableNodeDrag={!dragLink}
             linkColor={linkColor}
             linkWidth={linkWidth}
+            linkCanvasObject={linkCanvasObject}
+            linkCanvasObjectMode={() => 'after'}
             linkDirectionalParticles={2}
             linkDirectionalParticleWidth={2}
             onNodeClick={handleNodeClick}
@@ -531,7 +591,19 @@ export default function GraphViewer() {
           relationship={selectedRel}
           onClose={() => setSelectedRel(null)}
           onDelete={handleDeleteRel}
-          onUpdate={() => fetchGraphData()}
+          onUpdate={(updatedRel?: Relationship) => {
+            if (updatedRel) {
+              updateRelInPlace(updatedRel);
+              setSelectedRel(updatedRel);
+              setGraphData(prev => {
+                if (!prev) return prev;
+                return {
+                  ...prev,
+                  relationships: prev.relationships.map(r => r.id === updatedRel.id ? updatedRel : r),
+                };
+              });
+            }
+          }}
           deleting={deleting}
           isMobile={isMobile}
         />

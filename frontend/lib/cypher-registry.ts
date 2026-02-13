@@ -316,6 +316,31 @@ export const QUERY_REGISTRY = {
     },
   },
 
+  removeLabel: {
+    description: 'Remove a label from a node',
+    cypher: (params: { nodeId: string; label: string }) => {
+      return `
+        MATCH (n)
+        WHERE elementId(n) = $nodeId
+        REMOVE n:\`${params.label}\`
+        SET n.updatedAt = datetime()
+        RETURN n, elementId(n) as nodeId, labels(n) as labels
+      `;
+    },
+    validate: (params: unknown): params is { nodeId: string; label: string } => {
+      return isObject(params) && isString(params.nodeId) && isString(params.label);
+    },
+    transform: (records: unknown[]) => {
+      if (!records[0]) return null;
+      const record = records[0] as { n: { properties: unknown }; nodeId: string; labels: string[] };
+      return {
+        id: record.nodeId,
+        labels: record.labels,
+        properties: toNativeTypes(record.n.properties),
+      };
+    },
+  },
+
   getNode: {
     description: 'Get a single node by ID',
     cypher: `

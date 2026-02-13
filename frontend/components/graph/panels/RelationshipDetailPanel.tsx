@@ -1,223 +1,312 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import dynamic from 'next/dynamic';
 import { Relationship } from '../types';
 import { BottomSheet } from './BottomSheet';
 import { ResizablePanel } from './ResizablePanel';
 import { api } from '@/lib/api-client';
 
+const ObsidianEditor = dynamic(
+  () => import('./ObsidianEditor').then((mod) => mod.ObsidianEditor),
+  { ssr: false }
+);
+
+type ObsidianEditorRef = { setValue: (value: string) => void };
+
 interface Props {
   relationship: Relationship;
   onClose: () => void;
   onDelete: () => void;
-  onUpdate?: () => void;
+  onUpdate?: (updatedRel?: Relationship) => void;
   deleting: boolean;
   isMobile?: boolean;
 }
 
-export function RelationshipDetailPanel({ 
-  relationship, 
-  onClose, 
-  onDelete, 
+export function RelationshipDetailPanel({
+  relationship,
+  onClose,
+  onDelete,
   onUpdate,
-  deleting, 
-  isMobile 
+  deleting,
+  isMobile
 }: Props) {
-  const [isEditing, setIsEditing] = useState(false);
+  const [editedText, setEditedText] = useState<string>('');
   const [editedProperties, setEditedProperties] = useState<Record<string, unknown>>({});
   const [newPropKey, setNewPropKey] = useState('');
   const [newPropValue, setNewPropValue] = useState('');
-  const [saving, setSaving] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [error, setError] = useState<string | null>(null);
+  const [showAdvanced, setShowAdvanced] = useState(false);
+
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const initialLoadRef = useRef(true);
+  const lastRelIdRef = useRef<string | null>(null);
+  const originalTextRef = useRef<string>('');
+  const originalPropertiesRef = useRef<Record<string, unknown>>({});
+  const editorRef = useRef<ObsidianEditorRef>(null);
 
   useEffect(() => {
-    setEditedProperties({ ...relationship.properties });
-    setIsEditing(false);
+    if (lastRelIdRef.current === relationship.id) return;
+
+    lastRelIdRef.current = relationship.id;
+    const { text, ...otherProps } = relationship.properties as { text?: string; [key: string]: unknown };
+    const textValue = typeof text === 'string' ? text : '';
+
+    setEditedText(textValue);
+    setEditedProperties(otherProps);
     setNewPropKey('');
     setNewPropValue('');
     setError(null);
+    setSaveStatus('idle');
+    setShowAdvanced(false);
+    initialLoadRef.current = true;
+
+    originalTextRef.current = textValue;
+    originalPropertiesRef.current = otherProps;
+
+    editorRef.current?.setValue(textValue);
   }, [relationship]);
 
-  const handleSave = async () => {
-    setSaving(true);
+  const hasChanges = useCallback(() => {
+    if (editedText !== originalTextRef.current) return true;
+
+    const origKeys = Object.keys(originalPropertiesRef.current);
+    const editKeys = Object.keys(editedProperties);
+    if (origKeys.length !== editKeys.length) return true;
+
+    for (const key of editKeys) {
+      if (editedProperties[key] !== originalPropertiesRef.current[key]) return true;
+    }
+    return false;
+  }, [editedText, editedProperties]);
+
+  const doSave = useCallback(async () => {
+    if (!hasChanges()) {
+      setSaveStatus('idle');
+      return;
+    }
+
+    setSaveStatus('saving');
     setError(null);
     try {
-      await api.updateRelationship(relationship.id, editedProperties);
-      setIsEditing(false);
-      onUpdate?.();
+      const properties: Record<string, unknown> = {
+        ...editedProperties,
+        text: editedText,
+      };
+
+      await api.updateRelationship(relationship.id, properties);
+      setSaveStatus('saved');
+
+      originalTextRef.current = editedText;
+      originalPropertiesRef.current = { ...editedProperties };
+
+      const updatedRel: Relationship = {
+        ...relationship,
+        properties: { ...editedProperties, text: editedText },
+      };
+      onUpdate?.(updatedRel);
+
+      setTimeout(() => setSaveStatus('idle'), 2000);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
-    } finally {
-      setSaving(false);
+      setSaveStatus('error');
     }
-  };
+  }, [editedText, editedProperties, relationship, onUpdate, hasChanges]);
+
+  useEffect(() => {
+    if (initialLoadRef.current) {
+      initialLoadRef.current = false;
+      return;
+    }
+
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+
+    setSaveStatus('idle');
+    saveTimeoutRef.current = setTimeout(() => {
+      doSave();
+    }, 1000);
+
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, [editedText, editedProperties, doSave]);
 
   const handlePropertyChange = (key: string, value: string) => {
     const originalValue = relationship.properties[key];
-    let parsedValue: string | number = value;
-    
+    let parsedValue: unknown = value;
+
     if (typeof originalValue === 'number') {
       parsedValue = value === '' ? 0 : parseFloat(value);
-      if (isNaN(parsedValue)) parsedValue = 0;
+      if (isNaN(parsedValue as number)) parsedValue = 0;
     }
-    
-    setEditedProperties(prev => ({ ...prev, [key]: parsedValue }));
+
+    setEditedProperties((prev) => ({ ...prev, [key]: parsedValue }));
   };
 
   const handleAddProperty = () => {
     if (!newPropKey.trim()) return;
-    setEditedProperties(prev => ({ ...prev, [newPropKey]: newPropValue }));
+    setEditedProperties((prev) => ({ ...prev, [newPropKey]: newPropValue }));
     setNewPropKey('');
     setNewPropValue('');
   };
 
   const handleRemoveProperty = (key: string) => {
-    setEditedProperties(prev => {
-      const newProps = { ...prev };
-      delete newProps[key];
-      return newProps;
+    if (!confirm(`Delete property "${key}"?`)) return;
+    setEditedProperties((prev) => {
+      const { [key]: _, ...rest } = prev;
+      return rest;
     });
   };
 
-  const handleCancel = () => {
-    setEditedProperties({ ...relationship.properties });
-    setIsEditing(false);
-    setError(null);
-  };
-
   const content = (
-    <div className="space-y-3">
+    <div className="space-y-4">
       <div>
-        <div className="text-sm font-medium text-muted-foreground">Type</div>
-        <div className="text-lg text-foreground">{relationship.type}</div>
+        <ObsidianEditor
+          innerRef={editorRef}
+          value={editedText}
+          onChange={setEditedText}
+          minHeight="150px"
+        />
       </div>
 
-      <div>
-        <div className="text-sm font-medium text-muted-foreground">From Node</div>
-        <div className="text-foreground text-sm truncate">{relationship.startNode}</div>
-      </div>
-
-      <div>
-        <div className="text-sm font-medium text-muted-foreground">To Node</div>
-        <div className="text-foreground text-sm truncate">{relationship.endNode}</div>
-      </div>
-
-      <div>
-        <div className="flex justify-between items-center mb-2">
-          <div className="text-sm font-medium text-muted-foreground">Properties</div>
-          {!isEditing && (
-            <button
-              data-testid="edit-rel-btn"
-              onClick={() => setIsEditing(true)}
-              className="text-xs px-2 py-1 bg-accent hover:bg-muted text-foreground rounded"
-            >
-              Edit
-            </button>
-          )}
-        </div>
-
-        <div className="space-y-2">
-          {Object.entries(editedProperties).map(([key, value]) => (
-            <div key={key} className="border-b border-border pb-2">
-              <div className="flex justify-between items-center">
-                <div className="text-xs text-muted-foreground">{key}</div>
-                {isEditing && (
-                  <button
-                    onClick={() => handleRemoveProperty(key)}
-                    className="text-xs text-red-400 hover:text-red-300"
-                  >
-                    Remove
-                  </button>
-                )}
-              </div>
-              {isEditing ? (
-                <input
-                  type={typeof relationship.properties[key] === 'number' ? 'number' : 'text'}
-                  value={typeof value === 'object' ? JSON.stringify(value) : String(value ?? '')}
-                  onChange={(e) => handlePropertyChange(key, e.target.value)}
-                  step={typeof relationship.properties[key] === 'number' ? '0.01' : undefined}
-                  className="w-full px-2 py-1 bg-input border border-border rounded text-sm text-foreground focus:outline-none focus:border-foreground"
-                />
-              ) : (
-                <div className="text-sm text-foreground">{String(value)}</div>
-              )}
-            </div>
-          ))}
-
-          {Object.keys(editedProperties).length === 0 && !isEditing && (
-            <div className="text-muted-foreground text-sm italic">No properties</div>
-          )}
-
-          {isEditing && (
-            <div className="border-t border-border pt-3">
-              <div className="text-xs text-muted-foreground mb-2">Add Property</div>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  placeholder="Key"
-                  value={newPropKey}
-                  onChange={(e) => setNewPropKey(e.target.value)}
-                  className="flex-1 px-2 py-1 bg-input border border-border rounded text-sm text-foreground"
-                />
-                <input
-                  type="text"
-                  placeholder="Value"
-                  value={newPropValue}
-                  onChange={(e) => setNewPropValue(e.target.value)}
-                  className="flex-1 px-2 py-1 bg-input border border-border rounded text-sm text-foreground"
-                />
-                <button
-                  onClick={handleAddProperty}
-                  className="px-2 py-1 bg-accent hover:bg-muted text-foreground rounded text-sm"
-                >
-                  +
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
+      <div className="flex items-center gap-2">
+        <span className="px-2 py-0.5 rounded text-xs bg-accent text-foreground">
+          {relationship.type}
+        </span>
       </div>
 
       {error && (
-        <div className="px-3 py-2 bg-red-900/50 text-red-300 text-sm rounded">
-          {error}
-        </div>
+        <div className="px-3 py-2 bg-red-900/50 text-red-300 text-sm rounded">{error}</div>
       )}
 
-      {isEditing && (
-        <div className="flex gap-2">
-          <button
-            data-testid="save-rel-btn"
-            onClick={handleSave}
-            disabled={saving}
-            className="flex-1 px-3 py-2 bg-foreground hover:bg-foreground/90 disabled:bg-muted text-background text-sm rounded"
+      <div className="border-t border-border pt-3">
+        <button
+          onClick={() => setShowAdvanced(!showAdvanced)}
+          className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className={`h-4 w-4 transition-transform duration-200 ${showAdvanced ? 'rotate-90' : ''}`}
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
           >
-            {saving ? 'Saving...' : 'Save'}
-          </button>
-          <button
-            onClick={handleCancel}
-            disabled={saving}
-            className="flex-1 px-3 py-2 bg-accent hover:bg-muted text-foreground text-sm rounded"
-          >
-            Cancel
-          </button>
-        </div>
-      )}
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+          More options
+        </button>
 
-      <button
-        data-testid="delete-rel-btn"
-        onClick={onDelete}
-        disabled={deleting || isEditing}
-        className="w-full mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:bg-muted disabled:text-muted-foreground"
-      >
-        {deleting ? 'Deleting...' : 'Delete Relationship'}
-      </button>
+        <div
+          className={`grid transition-all duration-200 ease-in-out ${
+            showAdvanced ? 'grid-rows-[1fr] opacity-100 mt-3' : 'grid-rows-[0fr] opacity-0'
+          }`}
+        >
+          <div className="overflow-hidden">
+            <div className="space-y-4">
+              {Object.keys(editedProperties).length > 0 && (
+                <div>
+                  <div className="text-sm font-medium text-muted-foreground mb-2">Properties</div>
+                  <div className="space-y-3">
+                    {Object.entries(editedProperties).map(([key, value]) => (
+                      <div key={key}>
+                        <label className="text-xs text-muted-foreground block mb-1">{key}</label>
+                        <div className="flex gap-2">
+                          <input
+                            type={typeof relationship.properties[key] === 'number' ? 'number' : 'text'}
+                            value={String(value ?? '')}
+                            onChange={(e) => handlePropertyChange(key, e.target.value)}
+                            step={typeof relationship.properties[key] === 'number' ? '0.01' : undefined}
+                            className="flex-1 px-2 py-1 bg-input border border-border rounded text-sm text-foreground focus:outline-none focus:border-foreground"
+                          />
+                          <button
+                            onClick={() => handleRemoveProperty(key)}
+                            className="px-2 py-1 text-red-400 hover:text-red-300 hover:bg-red-900/30 rounded text-sm transition-colors"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <div className="text-xs text-muted-foreground mb-2">Add Property</div>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="Key"
+                    value={newPropKey}
+                    onChange={(e) => setNewPropKey(e.target.value)}
+                    className="flex-1 px-2 py-1 bg-input border border-border rounded text-sm text-foreground"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Value"
+                    value={newPropValue}
+                    onChange={(e) => setNewPropValue(e.target.value)}
+                    className="flex-1 px-2 py-1 bg-input border border-border rounded text-sm text-foreground"
+                  />
+                  <button
+                    onClick={handleAddProperty}
+                    className="px-2 py-1 bg-accent hover:bg-muted text-foreground rounded text-sm"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+
+              <div className="pt-2">
+                <button
+                  data-testid="delete-rel-btn"
+                  onClick={onDelete}
+                  disabled={deleting}
+                  className="flex items-center gap-2 px-3 py-1.5 text-red-400 hover:text-red-300 hover:bg-red-900/30 rounded text-sm transition-colors"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                  {deleting ? 'Deleting...' : 'Delete'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const statusIndicator = (
+    <div className="flex items-center gap-2">
+      {saveStatus === 'saving' && (
+        <span className="text-xs text-muted-foreground flex items-center gap-1">
+          <svg className="animate-spin h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          Saving
+        </span>
+      )}
+      {saveStatus === 'saved' && (
+        <span className="text-xs text-foreground flex items-center gap-1">
+          <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+          </svg>
+          Saved
+        </span>
+      )}
     </div>
   );
 
   if (isMobile) {
     return (
-      <BottomSheet title="Relationship" onClose={onClose}>
+      <BottomSheet title="Edit Link" onClose={onClose}>
         {content}
       </BottomSheet>
     );
@@ -226,12 +315,15 @@ export function RelationshipDetailPanel({
   return (
     <ResizablePanel
       storageKey="relationship-detail"
-      defaultWidth={320}
-      minWidth={280}
-      maxWidth={600}
+      defaultWidth={384}
+      minWidth={320}
+      maxWidth={700}
     >
-      <div className="flex justify-between items-start mb-4">
-        <h2 className="text-xl font-bold text-foreground">Relationship</h2>
+      <div className="flex justify-between items-center mb-4">
+        <div className="flex items-center gap-3">
+          <h2 className="text-xl font-bold text-foreground">Edit</h2>
+          {statusIndicator}
+        </div>
         <button onClick={onClose} className="text-muted-foreground hover:text-foreground text-xl">✕</button>
       </div>
       {content}

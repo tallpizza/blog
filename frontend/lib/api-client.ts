@@ -87,6 +87,9 @@ export const api = {
   updateNode: (nodeId: string, data: { addLabel?: string; [key: string]: unknown }) =>
     executeQuery<GraphNode>('updateNode', { nodeId, ...data }),
 
+  removeLabel: (nodeId: string, label: string) =>
+    executeQuery<GraphNode>('removeLabel', { nodeId, label }),
+
   deleteNode: (nodeId: string) =>
     executeQuery<{ deleted: number }>('deleteNode', { nodeId }),
 
