@@ -27,10 +27,15 @@ export function GraphSettingsProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const updateSettings = useCallback(async (newSettings: Partial<GraphSettings>) => {
-    const merged = { ...settings, ...newSettings };
-    setSettings(merged);
-    await api.setGraphSettings(merged);
-  }, [settings]);
+    let merged: GraphSettings | null = null;
+    setSettings((prev) => {
+      merged = { ...prev, ...newSettings };
+      return merged;
+    });
+    if (merged) {
+      await api.setGraphSettings(merged);
+    }
+  }, []);
 
   return (
     <GraphSettingsContext.Provider value={{ settings, updateSettings, loading }}>

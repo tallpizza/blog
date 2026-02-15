@@ -6,6 +6,7 @@ import { DEFAULT_GRAPH_SETTINGS } from '@/lib/api-client';
 
 interface SliderSettingProps {
   label: string;
+  description: string;
   value: number;
   min: number;
   max: number;
@@ -13,13 +14,14 @@ interface SliderSettingProps {
   onChange: (value: number) => void;
 }
 
-function SliderSetting({ label, value, min, max, step = 1, onChange }: SliderSettingProps) {
+function SliderSetting({ label, description, value, min, max, step = 1, onChange }: SliderSettingProps) {
   return (
     <div className="space-y-1">
       <div className="flex justify-between text-sm">
         <span className="text-gray-300">{label}</span>
         <span className="text-gray-400 font-mono">{value}</span>
       </div>
+      <div className="text-xs text-gray-500 leading-snug">{description}</div>
       <input
         type="range"
         min={min}
@@ -80,7 +82,7 @@ export function SettingsPanel() {
             ? 'bg-blue-600 text-white' 
             : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
         }`}
-        title="Graph Settings"
+        title="그래프 설정"
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -99,75 +101,90 @@ export function SettingsPanel() {
       </button>
 
       {isOpen && (
-        <div
-          ref={panelRef}
-          className="absolute right-0 top-full mt-2 w-72 bg-gray-900 border border-gray-700 rounded-lg shadow-xl z-50"
-        >
-          <div className="p-4 border-b border-gray-700">
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-white">Graph Settings</h3>
-              <button
-                onClick={handleReset}
-                className="text-xs text-gray-400 hover:text-white transition-colors"
-              >
-                Reset
-              </button>
+          <div
+            ref={panelRef}
+            className="absolute right-0 top-full mt-2 w-72 bg-gray-900 border border-gray-700 rounded-lg shadow-xl z-50"
+          >
+            <div className="p-4 border-b border-gray-700">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-white">그래프 설정</h3>
+                <button
+                  onClick={handleReset}
+                  className="text-xs text-gray-400 hover:text-white transition-colors"
+                >
+                  초기화
+                </button>
+              </div>
+            </div>
+
+            <div className="p-4 space-y-4">
+              <SliderSetting
+                label="노드 크기"
+                description="노드 반지름(px)"
+                value={settings.nodeRadius}
+                min={10}
+                max={50}
+                onChange={handleSettingChange('nodeRadius')}
+              />
+
+              <SliderSetting
+                label="노드 반발력"
+                description="노드끼리 밀어내는 힘(내부는 -값)"
+                value={Math.abs(settings.chargeStrength)}
+                min={0}
+                max={1500}
+                step={5}
+                onChange={(v) => handleSettingChange('chargeStrength')(-v)}
+              />
+
+              <SliderSetting
+                label="링크 거리"
+                description="연결된 노드 목표 거리"
+                value={settings.linkDistance}
+                min={50}
+                max={400}
+                step={10}
+                onChange={handleSettingChange('linkDistance')}
+              />
+
+              <SliderSetting
+                label="중심으로 당김"
+                description="중앙으로 모으는 힘"
+                value={Math.round(settings.centerStrength * 100)}
+                min={0}
+                max={50}
+                step={1}
+                onChange={(v) => handleSettingChange('centerStrength')(v / 100)}
+              />
+
+              <SliderSetting
+                label="링크 강도"
+                description="연결 스프링 강도"
+                value={settings.linkStrength * 100}
+                min={10}
+                max={200}
+                step={10}
+                onChange={(v) => handleSettingChange('linkStrength')(v / 100)}
+              />
+
+              <SliderSetting
+                label="감쇠(마찰)"
+                description="흔들림이 빨리 죽는 정도"
+                value={settings.velocityDecay * 100}
+                min={10}
+                max={90}
+                step={5}
+                onChange={(v) => handleSettingChange('velocityDecay')(v / 100)}
+              />
+            </div>
+
+            <div className="px-4 pb-4">
+              <p className="text-xs text-gray-500">
+                변경 사항은 즉시 적용되며 자동 저장됩니다.
+              </p>
             </div>
           </div>
-
-          <div className="p-4 space-y-4">
-            <SliderSetting
-              label="Node Size"
-              value={settings.nodeRadius}
-              min={10}
-              max={50}
-              onChange={handleSettingChange('nodeRadius')}
-            />
-
-            <SliderSetting
-              label="Node Spacing"
-              value={Math.abs(settings.chargeStrength)}
-              min={50}
-              max={500}
-              step={10}
-              onChange={(v) => handleSettingChange('chargeStrength')(-v)}
-            />
-
-            <SliderSetting
-              label="Link Distance"
-              value={settings.linkDistance}
-              min={50}
-              max={300}
-              step={10}
-              onChange={handleSettingChange('linkDistance')}
-            />
-
-            <SliderSetting
-              label="Link Strength"
-              value={settings.linkStrength * 100}
-              min={10}
-              max={200}
-              step={10}
-              onChange={(v) => handleSettingChange('linkStrength')(v / 100)}
-            />
-
-            <SliderSetting
-              label="Velocity Decay"
-              value={settings.velocityDecay * 100}
-              min={10}
-              max={90}
-              step={5}
-              onChange={(v) => handleSettingChange('velocityDecay')(v / 100)}
-            />
-          </div>
-
-          <div className="px-4 pb-4">
-            <p className="text-xs text-gray-500">
-              Changes apply immediately and are saved automatically.
-            </p>
-          </div>
-        </div>
-      )}
+        )}
     </div>
   );
 }
