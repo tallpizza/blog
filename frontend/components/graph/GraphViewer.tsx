@@ -8,6 +8,8 @@ import { Graph3DErrorBoundary } from './Graph3DErrorBoundary';
 import { NodeDetailPanel, RelationshipDetailPanel, SearchPanel, UndoRedoButtons, SettingsPanel } from './panels';
 import { useRingLinkCreation, useGraphRendering, useUndoRedo, parseMarkdownLabel } from './hooks';
 import { getNodeCaption } from './utils';
+import { applyGraphForces } from './physics/applyGraphForces';
+import { pinNodesInPlace, unpinNodes, repinNode } from './physics/dragPinning';
 import SpriteText from 'three-spritetext';
 import NodePanel from '@/components/nodes/NodePanel';
 import { api } from '@/lib/api-client';
@@ -74,6 +76,23 @@ export default function GraphViewer() {
   const forceGraphDataRef = useRef<ForceGraphData>({ nodes: [], links: [] });
   const prevNodeCountRef = useRef(0);
   const prevRelCountRef = useRef(0);
+
+  type ForceGraphDragNode = Record<string, unknown> & {
+    id?: string | number;
+    x?: number;
+    y?: number;
+    z?: number;
+    fx?: number;
+    fy?: number;
+    fz?: number;
+  };
+
+  type DragTranslate = { x: number; y: number };
+
+  const dragPinStateRef = useRef<{ draggingNodeId: string | null; pinnedOthers: boolean }>({
+    draggingNodeId: null,
+    pinnedOthers: false,
+  });
 
   const updateNodeInPlace = useCallback((updatedNode: Node) => {
     const nodes = forceGraphDataRef.current.nodes;
@@ -165,11 +184,13 @@ export default function GraphViewer() {
 
   useEffect(() => {
     if (fgRef.current && forceGraphData.nodes.length > 0) {
-      fgRef.current.d3Force('charge')?.strength(graphSettings.chargeStrength);
-      fgRef.current.d3Force('link')?.distance(graphSettings.linkDistance).strength(graphSettings.linkStrength);
-      fgRef.current.d3ReheatSimulation?.();
+      applyGraphForces({
+        fg: fgRef.current,
+        settings: graphSettings,
+        is3D,
+      });
     }
-  }, [forceGraphData.nodes.length, graphSettings.chargeStrength, graphSettings.linkDistance, graphSettings.linkStrength, graphSettings.velocityDecay, graphSettings.nodeRadius]);
+  }, [forceGraphData.nodes.length, graphSettings.chargeStrength, graphSettings.linkDistance, graphSettings.linkStrength, graphSettings.centerStrength, graphSettings.nodeRadius, is3D]);
 
   const handleInstantLinkCreate = useCallback(async (link: PendingLink) => {
     try {
@@ -397,6 +418,28 @@ export default function GraphViewer() {
     setHighlightedNodeIds(nodeIds);
   }, []);
 
+  const handleNodeDrag = useCallback((node: ForceGraphDragNode, _translate: DragTranslate) => {
+    const nodeId = node.id == null ? null : String(node.id);
+    if (!nodeId) return;
+
+    const state = dragPinStateRef.current;
+    if (!state.pinnedOthers || state.draggingNodeId !== nodeId) {
+      pinNodesInPlace(forceGraphDataRef.current.nodes);
+      unpinNodes(forceGraphDataRef.current.nodes, nodeId);
+      state.pinnedOthers = true;
+      state.draggingNodeId = nodeId;
+    }
+  }, []);
+
+  const handleNodeDragEnd = useCallback((node: ForceGraphDragNode, _translate: DragTranslate) => {
+    const nodeId = node.id == null ? null : String(node.id);
+    if (!nodeId) return;
+
+    repinNode(forceGraphDataRef.current.nodes, nodeId);
+    unpinNodes(forceGraphDataRef.current.nodes, nodeId);
+    dragPinStateRef.current = { draggingNodeId: null, pinnedOthers: false };
+  }, []);
+
   const handleUndo = useCallback(async () => {
     setIsUndoRedoProcessing(true);
     try {
@@ -534,10 +577,15 @@ export default function GraphViewer() {
               linkDirectionalParticles={2}
               linkDirectionalParticleWidth={2}
               onNodeClick={handleNodeClick}
+              onNodeDrag={handleNodeDrag}
+              onNodeDragEnd={handleNodeDragEnd}
               onNodeHover={(node: any) => setHoveredNode(node)}
               onLinkClick={handleLinkClick}
               onLinkHover={(link: any) => setHoveredLink(link)}
               onBackgroundClick={handleBackgroundClick}
+              d3AlphaDecay={0.05}
+              d3VelocityDecay={graphSettings.velocityDecay}
+              cooldownTicks={100}
               backgroundColor={graphBgColor}
               showNavInfo={false}
             />
@@ -556,6 +604,8 @@ export default function GraphViewer() {
             linkDirectionalParticles={2}
             linkDirectionalParticleWidth={2}
             onNodeClick={handleNodeClick}
+            onNodeDrag={handleNodeDrag}
+            onNodeDragEnd={handleNodeDragEnd}
             onNodeHover={(node: any) => setHoveredNode(node)}
             onLinkClick={handleLinkClick}
             onLinkHover={(link: any) => setHoveredLink(link)}

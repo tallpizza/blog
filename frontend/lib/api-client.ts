@@ -54,14 +54,16 @@ export interface GraphSettings {
   linkDistance: number;
   linkStrength: number;
   velocityDecay: number;
+  centerStrength: number;
 }
 
 export const DEFAULT_GRAPH_SETTINGS: GraphSettings = {
   nodeRadius: 20,
-  chargeStrength: -200,
-  linkDistance: 150,
-  linkStrength: 1,
-  velocityDecay: 0.4,
+  chargeStrength: -600,
+  linkDistance: 200,
+  linkStrength: 0.3,
+  velocityDecay: 0.85,
+  centerStrength: 0.12,
 };
 
 export const api = {

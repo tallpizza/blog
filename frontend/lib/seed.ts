@@ -8,10 +8,11 @@ const DEFAULT_LABEL_COLORS = {
 
 const DEFAULT_GRAPH_SETTINGS = {
   nodeRadius: 20,
-  chargeStrength: -200,
-  linkDistance: 150,
-  linkStrength: 1,
-  velocityDecay: 0.4,
+  chargeStrength: -600,
+  linkDistance: 200,
+  linkStrength: 0.3,
+  velocityDecay: 0.85,
+  centerStrength: 0.12,
 };
 
 const SAMPLE_NODES = [
