@@ -28,6 +28,7 @@ export default function GraphViewer() {
   const [error, setError] = useState<string | null>(null);
   
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
+  const [focusedNodeId, setFocusedNodeId] = useState<string | null>(null);
   const [selectedRel, setSelectedRel] = useState<Relationship | null>(null);
   const [hoveredNode, setHoveredNode] = useState<any>(null);
   const [hoveredLink, setHoveredLink] = useState<any>(null);
@@ -238,6 +239,7 @@ export default function GraphViewer() {
     hoveredNode,
     hoveredLink,
     selectedNode,
+    focusedNodeId,
     dragLink,
     dragTargetNode,
     ringHovered,
@@ -260,13 +262,23 @@ export default function GraphViewer() {
 
   const handleNodeClick = useCallback((node: any) => {
     if (dragLink) return;
+    const nodeId = String(node.id);
     setSelectedRel(null);
-    setSelectedNode(node.originalNode);
-  }, [dragLink]);
+    
+    if (focusedNodeId === nodeId) {
+      // 2nd click on focused node → open detail panel
+      setSelectedNode(node.originalNode);
+    } else {
+      // 1st click → focus (ring only), close any open panel
+      setSelectedNode(null);
+      setFocusedNodeId(nodeId);
+    }
+  }, [dragLink, focusedNodeId]);
 
   const handleLinkClick = useCallback((link: any) => {
     if (dragLink) return;
     setSelectedNode(null);
+    setFocusedNodeId(null);
     setSelectedRel(link.originalRel);
   }, [dragLink]);
 
@@ -308,6 +320,7 @@ export default function GraphViewer() {
       };
     });
     setSelectedNode(node);
+    setFocusedNodeId(node.id);
   }, []);
 
   const handleBackgroundClick = useCallback((event?: any) => {
@@ -362,12 +375,14 @@ export default function GraphViewer() {
 
     setSelectedNode(null);
     setSelectedRel(null);
+    setFocusedNodeId(null);
   }, [isMobile, forceGraphData.links]);
 
   const handleSearchSelect = useCallback((nodeId: string) => {
     const node = graphData?.nodes.find(n => n.id === nodeId);
     if (node) {
       setSelectedNode(node);
+      setFocusedNodeId(nodeId);
       setSelectedRel(null);
       
       const graphNode = forceGraphData.nodes.find(n => n.id === nodeId);
@@ -389,6 +404,7 @@ export default function GraphViewer() {
       await fetchGraphData();
       setSelectedNode(null);
       setSelectedRel(null);
+      setFocusedNodeId(null);
     } finally {
       setIsUndoRedoProcessing(false);
     }
@@ -401,6 +417,7 @@ export default function GraphViewer() {
       await fetchGraphData();
       setSelectedNode(null);
       setSelectedRel(null);
+      setFocusedNodeId(null);
     } finally {
       setIsUndoRedoProcessing(false);
     }
@@ -478,7 +495,7 @@ export default function GraphViewer() {
         {!isMobile && (
           <div className="absolute bottom-4 left-4 z-10 p-3 bg-panel/90 rounded text-xs text-muted-foreground max-w-xs">
             <div className="font-semibold mb-1 text-foreground">Controls</div>
-            <div>Click node: View details</div>
+            <div>Click node: Select → Click again: Details</div>
             <div>Drag node center: Move node</div>
             {!is3D && <div className="text-foreground">Drag from ring: Create link</div>}
             {is3D && <div className="text-foreground mt-1">Drag to rotate, scroll to zoom</div>}
@@ -555,7 +572,10 @@ export default function GraphViewer() {
       {selectedNode && (
         <NodeDetailPanel
           node={selectedNode}
-          onClose={() => setSelectedNode(null)}
+          onClose={() => {
+            setSelectedNode(null);
+            setFocusedNodeId(null);
+          }}
           onUpdate={(updatedNode?: Node) => {
             if (updatedNode) {
               updateNodeInPlace(updatedNode);
@@ -581,6 +601,7 @@ export default function GraphViewer() {
               };
             });
             setSelectedNode(null);
+            setFocusedNodeId(null);
           }}
           isMobile={isMobile}
         />
