@@ -198,10 +198,10 @@ export function NodeDetailPanel({ node, onClose, onUpdate, onDelete, isMobile }:
     return false;
   }, [editedText, editedProperties, newLabel]);
 
-  const doSave = useCallback(async () => {
+  const doSave = useCallback(async (): Promise<boolean> => {
     if (!hasChanges()) {
       setSaveStatus('idle');
-      return;
+      return true;
     }
     
     setSaveStatus('saving');
@@ -231,11 +231,29 @@ export function NodeDetailPanel({ node, onClose, onUpdate, onDelete, isMobile }:
       onUpdate?.(updatedNode);
       
       setTimeout(() => setSaveStatus('idle'), 2000);
+      return true;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
       setSaveStatus('error');
+      return false;
     }
   }, [editedText, editedProperties, newLabel, node.id, node.labels, onUpdate, hasChanges]);
+
+  const handleClose = useCallback(() => {
+    const closeWithSave = async () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+        saveTimeoutRef.current = null;
+      }
+
+      const isSaved = await doSave();
+      if (isSaved) {
+        onClose();
+      }
+    };
+
+    void closeWithSave();
+  }, [doSave, onClose]);
 
   useEffect(() => {
     if (initialLoadRef.current) {
@@ -249,7 +267,7 @@ export function NodeDetailPanel({ node, onClose, onUpdate, onDelete, isMobile }:
 
     setSaveStatus('idle');
     saveTimeoutRef.current = setTimeout(() => {
-      doSave();
+      void doSave();
     }, 1000);
 
     return () => {
@@ -585,7 +603,7 @@ export function NodeDetailPanel({ node, onClose, onUpdate, onDelete, isMobile }:
 
   if (isMobile) {
     return (
-      <BottomSheet title="Edit Node" onClose={onClose} data-testid="node-detail-panel">
+      <BottomSheet title="Edit Node" onClose={handleClose} data-testid="node-detail-panel">
         {content}
       </BottomSheet>
     );
@@ -604,7 +622,7 @@ export function NodeDetailPanel({ node, onClose, onUpdate, onDelete, isMobile }:
           <h2 className="text-xl font-bold text-foreground">Edit</h2>
           {statusIndicator}
         </div>
-        <button onClick={onClose} className="text-muted-foreground hover:text-foreground text-xl">
+        <button onClick={handleClose} className="text-muted-foreground hover:text-foreground text-xl">
           ✕
         </button>
       </div>

@@ -81,10 +81,10 @@ export function RelationshipDetailPanel({
     return false;
   }, [editedText, editedProperties]);
 
-  const doSave = useCallback(async () => {
+  const doSave = useCallback(async (): Promise<boolean> => {
     if (!hasChanges()) {
       setSaveStatus('idle');
-      return;
+      return true;
     }
 
     setSaveStatus('saving');
@@ -108,11 +108,29 @@ export function RelationshipDetailPanel({
       onUpdate?.(updatedRel);
 
       setTimeout(() => setSaveStatus('idle'), 2000);
+      return true;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
       setSaveStatus('error');
+      return false;
     }
   }, [editedText, editedProperties, relationship, onUpdate, hasChanges]);
+
+  const handleClose = useCallback(() => {
+    const closeWithSave = async () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+        saveTimeoutRef.current = null;
+      }
+
+      const isSaved = await doSave();
+      if (isSaved) {
+        onClose();
+      }
+    };
+
+    void closeWithSave();
+  }, [doSave, onClose]);
 
   useEffect(() => {
     if (initialLoadRef.current) {
@@ -126,7 +144,7 @@ export function RelationshipDetailPanel({
 
     setSaveStatus('idle');
     saveTimeoutRef.current = setTimeout(() => {
-      doSave();
+      void doSave();
     }, 1000);
 
     return () => {
@@ -306,7 +324,7 @@ export function RelationshipDetailPanel({
 
   if (isMobile) {
     return (
-      <BottomSheet title="Edit Link" onClose={onClose}>
+      <BottomSheet title="Edit Link" onClose={handleClose}>
         {content}
       </BottomSheet>
     );
@@ -324,7 +342,7 @@ export function RelationshipDetailPanel({
           <h2 className="text-xl font-bold text-foreground">Edit</h2>
           {statusIndicator}
         </div>
-        <button onClick={onClose} className="text-muted-foreground hover:text-foreground text-xl">✕</button>
+        <button onClick={handleClose} className="text-muted-foreground hover:text-foreground text-xl">✕</button>
       </div>
       {content}
     </ResizablePanel>
