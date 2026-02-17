@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Graph Admin",
-  description: "Neo4j Graph Database Administration UI",
+  title: "상상 연결소",
+  description: "상상을 연결하고 탐색하는 그래프 공간",
 };
 
 export const viewport: Viewport = {
