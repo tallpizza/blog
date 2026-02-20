@@ -55,6 +55,7 @@ export interface GraphSettings {
   linkStrength: number;
   velocityDecay: number;
   centerStrength: number;
+  initialZoom: number;
 }
 
 export const DEFAULT_GRAPH_SETTINGS: GraphSettings = {
@@ -64,6 +65,7 @@ export const DEFAULT_GRAPH_SETTINGS: GraphSettings = {
   linkStrength: 0.3,
   velocityDecay: 0.85,
   centerStrength: 0.12,
+  initialZoom: 1,
 };
 
 export const api = {

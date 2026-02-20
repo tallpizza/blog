@@ -176,6 +176,16 @@ export function SettingsPanel() {
                 step={5}
                 onChange={(v) => handleSettingChange('velocityDecay')(v / 100)}
               />
+
+              <SliderSetting
+                label="초기 줌 레벨"
+                description="그래프 로드 시 적용되는 줌 배율"
+                value={Math.round(settings.initialZoom * 10) / 10}
+                min={0.1}
+                max={5}
+                step={0.1}
+                onChange={handleSettingChange('initialZoom')}
+              />
             </div>
 
             <div className="px-4 pb-4">

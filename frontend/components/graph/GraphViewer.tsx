@@ -6,10 +6,9 @@ import dynamic from 'next/dynamic';
 import { GraphData, Node, Relationship, PendingLink, ForceGraphData } from './types';
 import { Graph3DErrorBoundary } from './Graph3DErrorBoundary';
 import { NodeDetailPanel, RelationshipDetailPanel, SearchPanel, UndoRedoButtons, SettingsPanel } from './panels';
-import { useRingLinkCreation, useGraphRendering, useUndoRedo, parseMarkdownLabel } from './hooks';
+import { useRingLinkCreation, useGraphRendering, useUndoRedo, parseMarkdownLabel, useObsidianDragPinning } from './hooks';
 import { getNodeCaption } from './utils';
 import { applyGraphForces } from './physics/applyGraphForces';
-import { pinNodesInPlace, unpinNodes, repinNode } from './physics/dragPinning';
 import SpriteText from 'three-spritetext';
 import NodePanel from '@/components/nodes/NodePanel';
 import { api } from '@/lib/api-client';
@@ -23,7 +22,7 @@ export default function GraphViewer() {
   const fgRef = useRef<any>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const { getColor, colors } = useLabelColors();
-  const { settings: graphSettings } = useGraphSettings();
+  const { settings: graphSettings, loading: settingsLoading } = useGraphSettings();
   
   const [graphData, setGraphData] = useState<GraphData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -42,6 +41,7 @@ export default function GraphViewer() {
   const [highlightedNodeIds, setHighlightedNodeIds] = useState<Set<string>>(new Set());
   const [isUndoRedoProcessing, setIsUndoRedoProcessing] = useState(false);
   const [graphBgColor, setGraphBgColor] = useState('#030712');
+  const initialZoomAppliedRef = useRef(false);
   
   const { canUndo, canRedo, pushCommand, undo, redo } = useUndoRedo();
 
@@ -77,22 +77,7 @@ export default function GraphViewer() {
   const prevNodeCountRef = useRef(0);
   const prevRelCountRef = useRef(0);
 
-  type ForceGraphDragNode = Record<string, unknown> & {
-    id?: string | number;
-    x?: number;
-    y?: number;
-    z?: number;
-    fx?: number;
-    fy?: number;
-    fz?: number;
-  };
-
-  type DragTranslate = { x: number; y: number };
-
-  const dragPinStateRef = useRef<{ draggingNodeId: string | null; pinnedOthers: boolean }>({
-    draggingNodeId: null,
-    pinnedOthers: false,
-  });
+  const { onNodeDrag, onNodeDragEnd } = useObsidianDragPinning({ forceGraphDataRef });
 
   const updateNodeInPlace = useCallback((updatedNode: Node) => {
     const nodes = forceGraphDataRef.current.nodes;
@@ -344,6 +329,19 @@ export default function GraphViewer() {
     setFocusedNodeId(node.id);
   }, []);
 
+  useEffect(() => {
+    if (fgRef.current) {
+      fgRef.current.zoom(graphSettings.initialZoom, 400);
+    }
+  }, [graphSettings.initialZoom]);
+
+  const handleEngineStop = useCallback(() => {
+    if (!initialZoomAppliedRef.current && fgRef.current) {
+      fgRef.current.zoom(graphSettings.initialZoom, 400);
+      initialZoomAppliedRef.current = true;
+    }
+  }, [graphSettings.initialZoom]);
+
   const handleBackgroundClick = useCallback((event?: any) => {
     if (isMobile && event && forceGraphData.links.length > 0 && fgRef.current && containerRef.current) {
       const canvas = containerRef.current.querySelector('canvas');
@@ -418,27 +416,6 @@ export default function GraphViewer() {
     setHighlightedNodeIds(nodeIds);
   }, []);
 
-  const handleNodeDrag = useCallback((node: ForceGraphDragNode, _translate: DragTranslate) => {
-    const nodeId = node.id == null ? null : String(node.id);
-    if (!nodeId) return;
-
-    const state = dragPinStateRef.current;
-    if (!state.pinnedOthers || state.draggingNodeId !== nodeId) {
-      pinNodesInPlace(forceGraphDataRef.current.nodes);
-      unpinNodes(forceGraphDataRef.current.nodes, nodeId);
-      state.pinnedOthers = true;
-      state.draggingNodeId = nodeId;
-    }
-  }, []);
-
-  const handleNodeDragEnd = useCallback((node: ForceGraphDragNode, _translate: DragTranslate) => {
-    const nodeId = node.id == null ? null : String(node.id);
-    if (!nodeId) return;
-
-    repinNode(forceGraphDataRef.current.nodes, nodeId);
-    unpinNodes(forceGraphDataRef.current.nodes, nodeId);
-    dragPinStateRef.current = { draggingNodeId: null, pinnedOthers: false };
-  }, []);
 
   const handleUndo = useCallback(async () => {
     setIsUndoRedoProcessing(true);
@@ -466,7 +443,7 @@ export default function GraphViewer() {
     }
   }, [redo, fetchGraphData]);
 
-  if (loading) {
+  if (loading || settingsLoading) {
     return (
       <div className="flex items-center justify-center h-screen bg-background">
         <div className="text-lg text-muted-foreground">Loading graph...</div>
@@ -577,12 +554,13 @@ export default function GraphViewer() {
               linkDirectionalParticles={2}
               linkDirectionalParticleWidth={2}
               onNodeClick={handleNodeClick}
-              onNodeDrag={handleNodeDrag}
-              onNodeDragEnd={handleNodeDragEnd}
+              onNodeDrag={onNodeDrag}
+              onNodeDragEnd={onNodeDragEnd}
               onNodeHover={(node: any) => setHoveredNode(node)}
               onLinkClick={handleLinkClick}
               onLinkHover={(link: any) => setHoveredLink(link)}
               onBackgroundClick={handleBackgroundClick}
+              onEngineStop={handleEngineStop}
               d3AlphaDecay={0.05}
               d3VelocityDecay={graphSettings.velocityDecay}
               cooldownTicks={100}
@@ -604,12 +582,13 @@ export default function GraphViewer() {
             linkDirectionalParticles={2}
             linkDirectionalParticleWidth={2}
             onNodeClick={handleNodeClick}
-            onNodeDrag={handleNodeDrag}
-            onNodeDragEnd={handleNodeDragEnd}
+            onNodeDrag={onNodeDrag}
+            onNodeDragEnd={onNodeDragEnd}
             onNodeHover={(node: any) => setHoveredNode(node)}
             onLinkClick={handleLinkClick}
             onLinkHover={(link: any) => setHoveredLink(link)}
             onBackgroundClick={handleBackgroundClick}
+            onEngineStop={handleEngineStop}
             onRenderFramePost={onRenderFramePost}
             d3AlphaDecay={0.05}
             d3VelocityDecay={graphSettings.velocityDecay}
