@@ -167,15 +167,29 @@ export default function GraphViewer() {
     };
   }, [forceGraphData]);
 
-  useEffect(() => {
-    if (fgRef.current && forceGraphData.nodes.length > 0) {
-      applyGraphForces({
-        fg: fgRef.current,
-        settings: graphSettings,
-        is3D,
-      });
+  const applyForces = useCallback(() => {
+    if (!fgRef.current || forceGraphData.nodes.length === 0) {
+      return;
     }
-  }, [forceGraphData.nodes.length, graphSettings.chargeStrength, graphSettings.linkDistance, graphSettings.linkStrength, graphSettings.centerStrength, graphSettings.nodeRadius, is3D]);
+
+    applyGraphForces({
+      fg: fgRef.current,
+      settings: graphSettings,
+      is3D,
+    });
+  }, [forceGraphData.nodes.length, graphSettings, is3D]);
+
+  const applyInitialZoom = useCallback(() => {
+    if (!fgRef.current) {
+      return;
+    }
+
+    fgRef.current.zoom(graphSettings.initialZoom, 400);
+  }, [graphSettings.initialZoom]);
+
+  useEffect(() => {
+    applyForces();
+  }, [applyForces]);
 
   const handleInstantLinkCreate = useCallback(async (link: PendingLink) => {
     try {
@@ -330,17 +344,18 @@ export default function GraphViewer() {
   }, []);
 
   useEffect(() => {
-    if (fgRef.current) {
-      fgRef.current.zoom(graphSettings.initialZoom, 400);
-    }
-  }, [graphSettings.initialZoom]);
+    applyInitialZoom();
+  }, [applyInitialZoom]);
 
   const handleEngineStop = useCallback(() => {
-    if (!initialZoomAppliedRef.current && fgRef.current) {
-      fgRef.current.zoom(graphSettings.initialZoom, 400);
-      initialZoomAppliedRef.current = true;
+    if (initialZoomAppliedRef.current) {
+      return;
     }
-  }, [graphSettings.initialZoom]);
+
+    applyForces();
+    applyInitialZoom();
+    initialZoomAppliedRef.current = true;
+  }, [applyForces, applyInitialZoom]);
 
   const handleBackgroundClick = useCallback((event?: any) => {
     if (isMobile && event && forceGraphData.links.length > 0 && fgRef.current && containerRef.current) {
