@@ -2,9 +2,19 @@ import { useEffect, useRef, useState, RefObject } from 'react';
 import { DragLink, PendingLink, ForceGraphNode } from '../types';
 import { NODE_RADIUS } from '../constants';
 
+interface GraphCoords {
+  x: number;
+  y: number;
+}
+
+interface GraphRef {
+  screen2GraphCoords: (x: number, y: number) => GraphCoords;
+  graph2ScreenCoords: (x: number, y: number) => GraphCoords;
+}
+
 interface UseRingLinkCreationProps {
   containerRef: RefObject<HTMLDivElement | null>;
-  fgRef: RefObject<any>;
+  fgRef: RefObject<GraphRef | undefined>;
   nodes: ForceGraphNode[];
   is3D: boolean;
   onPendingLink: (link: PendingLink) => void;
@@ -66,32 +76,13 @@ export function useRingLinkCreation({
     const findNodeAt = (graphX: number, graphY: number, maxRadius?: number) => {
       const searchRadius = maxRadius ?? nodeRadius;
       for (const node of nodes) {
-        const n = node as any;
-        if (n.x === undefined) continue;
-        const dx = n.x - graphX;
-        const dy = n.y - graphY;
+        if (node.x === undefined || node.y === undefined) continue;
+        const dx = node.x - graphX;
+        const dy = node.y - graphY;
         const dist = Math.sqrt(dx * dx + dy * dy);
         if (dist < searchRadius) return { node, dist };
       }
       return null;
-    };
-
-    const isInRing = (node: any, clientX: number, clientY: number) => {
-      const canvas = container.querySelector('canvas');
-      if (!canvas || !node.x || !node.y) return false;
-      
-      const nodeScreenCoords = fgRef.current?.graph2ScreenCoords(node.x, node.y);
-      if (!nodeScreenCoords) return false;
-      
-      const rect = canvas.getBoundingClientRect();
-      const nodeScreenX = rect.left + nodeScreenCoords.x;
-      const nodeScreenY = rect.top + nodeScreenCoords.y;
-      
-      const dx = clientX - nodeScreenX;
-      const dy = clientY - nodeScreenY;
-      const screenDist = Math.sqrt(dx * dx + dy * dy);
-      
-      return screenDist >= ringInner && screenDist <= ringOuter;
     };
 
     const handlePointerDown = (clientX: number, clientY: number, e: Event) => {
@@ -104,10 +95,9 @@ export function useRingLinkCreation({
       
       // Find node whose ring area contains the click (using screen coordinates)
       for (const node of nodes) {
-        const n = node as any;
-        if (n.x === undefined || n.y === undefined) continue;
+        if (node.x === undefined || node.y === undefined) continue;
         
-        const nodeScreenCoords = fgRef.current?.graph2ScreenCoords(n.x, n.y);
+        const nodeScreenCoords = fgRef.current?.graph2ScreenCoords(node.x, node.y);
         if (!nodeScreenCoords) continue;
         
         const nodeScreenX = rect.left + nodeScreenCoords.x;
@@ -220,14 +210,13 @@ export function useRingLinkCreation({
       const rect = canvas.getBoundingClientRect();
       
       // Find nearest node using screen coordinates
-      let nearestNode: any = null;
+      let nearestNode: ForceGraphNode | null = null;
       let nearestScreenDist = Infinity;
       
       for (const node of nodes) {
-        const n = node as any;
-        if (n.x === undefined || n.y === undefined) continue;
+        if (node.x === undefined || node.y === undefined) continue;
         
-        const nodeScreenCoords = fgRef.current?.graph2ScreenCoords(n.x, n.y);
+        const nodeScreenCoords = fgRef.current?.graph2ScreenCoords(node.x, node.y);
         if (!nodeScreenCoords) continue;
         
         const nodeScreenX = rect.left + nodeScreenCoords.x;
@@ -240,7 +229,7 @@ export function useRingLinkCreation({
         // Check if cursor is within ring's outer radius (in screen pixels)
         if (screenDist <= ringOuter && screenDist < nearestScreenDist) {
           nearestScreenDist = screenDist;
-          nearestNode = n;
+          nearestNode = node;
         }
       }
       

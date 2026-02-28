@@ -1,5 +1,27 @@
 import { test, expect, Page } from '@playwright/test';
 
+interface RuntimeForceNode {
+  id: string;
+  label: string;
+  x?: number;
+  y?: number;
+}
+
+interface RuntimeGraphData {
+  nodes?: RuntimeForceNode[];
+}
+
+interface RuntimeForceGraphInstance {
+  zoom?: {
+    transform?: () => { k: number; x: number; y: number };
+  };
+}
+
+interface RuntimeWindow extends Window {
+  __FORCE_GRAPH_DATA__?: RuntimeGraphData;
+  __FORCE_GRAPH_INSTANCE__?: RuntimeForceGraphInstance;
+}
+
 test.describe('Graph Viewer Interactions', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
@@ -28,12 +50,12 @@ test.describe('Graph Viewer Interactions', () => {
     const { box } = await getCanvasBounds(page);
     
     const positions = await page.evaluate(() => {
-      const graphData = (window as any).__FORCE_GRAPH_DATA__;
+      const graphData = (window as RuntimeWindow).__FORCE_GRAPH_DATA__;
       if (!graphData?.nodes) return [];
       
       return graphData.nodes
-        .filter((n: any) => n.x !== undefined && n.y !== undefined)
-        .map((n: any) => ({
+        .filter((n: RuntimeForceNode): n is RuntimeForceNode & { x: number; y: number } => n.x !== undefined && n.y !== undefined)
+        .map((n) => ({
           id: n.id,
           label: n.label,
           x: n.x,
@@ -44,16 +66,16 @@ test.describe('Graph Viewer Interactions', () => {
     if (!positions.length) return [];
     
     const transform = await page.evaluate(() => {
-      const fg = (window as any).__FORCE_GRAPH_INSTANCE__;
+      const fg = (window as RuntimeWindow).__FORCE_GRAPH_INSTANCE__;
       if (!fg) return { k: 1, x: 0, y: 0 };
       const t = fg.zoom?.transform?.() || { k: 1, x: 0, y: 0 };
       return { k: t.k, x: t.x, y: t.y };
     });
     
-    return positions.map((p: any) => ({
+    return positions.map((p) => ({
       ...p,
-      screenX: box.x + box.width / 2 + p.x * transform.k + transform.x,
-      screenY: box.y + box.height / 2 + p.y * transform.k + transform.y,
+      screenX: box.x + box.width / 2 + (p.x ?? 0) * transform.k + transform.x,
+      screenY: box.y + box.height / 2 + (p.y ?? 0) * transform.k + transform.y,
     }));
   }
 

@@ -2,8 +2,18 @@
 
 import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import dynamic from 'next/dynamic';
+import type {
+  ForceGraphMethods as ForceGraph2DMethods,
+  LinkObject as ForceGraph2DLinkObject,
+  NodeObject as ForceGraph2DNodeObject,
+} from 'react-force-graph-2d';
+import type {
+  ForceGraphMethods as ForceGraph3DMethods,
+  LinkObject as ForceGraph3DLinkObject,
+  NodeObject as ForceGraph3DNodeObject,
+} from 'react-force-graph-3d';
 
-import { GraphData, Node, Relationship, PendingLink, ForceGraphData } from './types';
+import { GraphData, Node, Relationship, PendingLink, ForceGraphData, ForceGraphLink, ForceGraphNode } from './types';
 import { Graph3DErrorBoundary } from './Graph3DErrorBoundary';
 import { NodeDetailPanel, RelationshipDetailPanel, SearchPanel, UndoRedoButtons, SettingsPanel } from './panels';
 import { useRingLinkCreation, useGraphRendering, useUndoRedo, parseMarkdownLabel, useObsidianDragPinning } from './hooks';
@@ -18,8 +28,32 @@ import { useGraphSettings } from '@/components/providers/GraphSettingsProvider';
 const ForceGraph2D = dynamic(() => import('react-force-graph-2d'), { ssr: false });
 const ForceGraph3D = dynamic(() => import('react-force-graph-3d'), { ssr: false });
 
+interface DebugWindow extends Window {
+  __FORCE_GRAPH_DATA__?: ForceGraphData;
+  __FORCE_GRAPH_INSTANCE__?: ForceGraphInstance;
+}
+
+interface BackgroundClickEvent {
+  clientX?: number;
+  clientY?: number;
+  pageX?: number;
+  pageY?: number;
+}
+
+type TwoDRefMethods = ForceGraph2DMethods<
+  ForceGraph2DNodeObject<Record<string, unknown>>,
+  ForceGraph2DLinkObject<Record<string, unknown>, Record<string, unknown>>
+>;
+
+type ThreeDRefMethods = ForceGraph3DMethods<
+  ForceGraph3DNodeObject<Record<string, unknown>>,
+  ForceGraph3DLinkObject<Record<string, unknown>, Record<string, unknown>>
+>;
+
+type ForceGraphInstance = TwoDRefMethods & ThreeDRefMethods;
+
 export default function GraphViewer() {
-  const fgRef = useRef<any>(null);
+  const fgRef = useRef<ForceGraphInstance | undefined>(undefined);
   const containerRef = useRef<HTMLDivElement>(null);
   const { getColor, colors } = useLabelColors();
   const { settings: graphSettings, loading: settingsLoading } = useGraphSettings();
@@ -31,8 +65,8 @@ export default function GraphViewer() {
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
   const [focusedNodeId, setFocusedNodeId] = useState<string | null>(null);
   const [selectedRel, setSelectedRel] = useState<Relationship | null>(null);
-  const [hoveredNode, setHoveredNode] = useState<any>(null);
-  const [hoveredLink, setHoveredLink] = useState<any>(null);
+  const [hoveredNode, setHoveredNode] = useState<ForceGraphNode | null>(null);
+  const [hoveredLink, setHoveredLink] = useState<ForceGraphLink | null>(null);
   
   const [deleting, setDeleting] = useState(false);
   const [is3D, setIs3D] = useState(false);
@@ -163,14 +197,15 @@ export default function GraphViewer() {
   }, [colors, getColor]);
 
   useEffect(() => {
+    const debugWindow = window as DebugWindow;
     if (typeof window !== 'undefined') {
-      (window as any).__FORCE_GRAPH_DATA__ = forceGraphData;
-      (window as any).__FORCE_GRAPH_INSTANCE__ = fgRef.current;
+      debugWindow.__FORCE_GRAPH_DATA__ = forceGraphData;
+      debugWindow.__FORCE_GRAPH_INSTANCE__ = fgRef.current;
     }
     return () => {
       if (typeof window !== 'undefined') {
-        delete (window as any).__FORCE_GRAPH_DATA__;
-        delete (window as any).__FORCE_GRAPH_INSTANCE__;
+        delete debugWindow.__FORCE_GRAPH_DATA__;
+        delete debugWindow.__FORCE_GRAPH_INSTANCE__;
       }
     };
   }, [forceGraphData]);
@@ -309,7 +344,8 @@ export default function GraphViewer() {
     nodeRadius: graphSettings.nodeRadius,
   });
 
-  const nodeThreeObject = useCallback((node: any) => {
+  const nodeThreeObject = useCallback((rawNode: unknown) => {
+    const node = rawNode as ForceGraphNode;
     const parsed = parseMarkdownLabel(node.label);
     const sprite = new SpriteText(parsed.text);
     sprite.color = '#ffffff';
@@ -321,7 +357,8 @@ export default function GraphViewer() {
     return sprite;
   }, []);
 
-  const handleNodeClick = useCallback((node: any) => {
+  const handleNodeClick = useCallback((rawNode: unknown) => {
+    const node = rawNode as ForceGraphNode;
     if (dragLink) return;
     const nodeId = String(node.id);
     setSelectedRel(null);
@@ -336,7 +373,8 @@ export default function GraphViewer() {
     }
   }, [dragLink, focusedNodeId]);
 
-  const handleLinkClick = useCallback((link: any) => {
+  const handleLinkClick = useCallback((rawLink: unknown) => {
+    const link = rawLink as ForceGraphLink;
     if (dragLink) return;
     setSelectedNode(null);
     setFocusedNodeId(null);
@@ -398,7 +436,7 @@ export default function GraphViewer() {
     initialZoomAppliedRef.current = true;
   }, [applyForces, applyInitialZoom]);
 
-  const handleBackgroundClick = useCallback((event?: any) => {
+  const handleBackgroundClick = useCallback((event?: BackgroundClickEvent) => {
     if (isMobile && event && forceGraphData.links.length > 0 && fgRef.current && containerRef.current) {
       const canvas = containerRef.current.querySelector('canvas');
       if (canvas) {
@@ -408,13 +446,21 @@ export default function GraphViewer() {
         if (clientX != null && clientY != null) {
           const screenCoords = { x: clientX - rect.left, y: clientY - rect.top };
 
-          let nearestLink: any = null;
+          let nearestLink: ForceGraphLink | null = null;
           let minDist = 30;
 
           for (const link of forceGraphData.links) {
-            const source = link.source as any;
-            const target = link.target as any;
-            if (source.x === undefined || target.x === undefined) continue;
+            const source = typeof link.source === 'string' ? null : link.source;
+            const target = typeof link.target === 'string' ? null : link.target;
+            if (!source || !target) continue;
+            if (
+              source.x === undefined ||
+              source.y === undefined ||
+              target.x === undefined ||
+              target.y === undefined
+            ) {
+              continue;
+            }
 
             const srcScreen = fgRef.current.graph2ScreenCoords(source.x, source.y);
             const tgtScreen = fgRef.current.graph2ScreenCoords(target.x, target.y);
@@ -612,9 +658,9 @@ export default function GraphViewer() {
               onNodeClick={handleNodeClick}
               onNodeDrag={onNodeDrag}
               onNodeDragEnd={onNodeDragEnd}
-              onNodeHover={(node: any) => setHoveredNode(node)}
+              onNodeHover={(node: unknown) => setHoveredNode((node as ForceGraphNode | null) ?? null)}
               onLinkClick={handleLinkClick}
-              onLinkHover={(link: any) => setHoveredLink(link)}
+              onLinkHover={(link: unknown) => setHoveredLink((link as ForceGraphLink | null) ?? null)}
               onBackgroundClick={handleBackgroundClick}
               onEngineStop={handleEngineStop}
               d3AlphaDecay={0.05}
@@ -640,9 +686,9 @@ export default function GraphViewer() {
             onNodeClick={handleNodeClick}
             onNodeDrag={onNodeDrag}
             onNodeDragEnd={onNodeDragEnd}
-            onNodeHover={(node: any) => setHoveredNode(node)}
+            onNodeHover={(node: unknown) => setHoveredNode((node as ForceGraphNode | null) ?? null)}
             onLinkClick={handleLinkClick}
-            onLinkHover={(link: any) => setHoveredLink(link)}
+            onLinkHover={(link: unknown) => setHoveredLink((link as ForceGraphLink | null) ?? null)}
             onBackgroundClick={handleBackgroundClick}
             onEngineStop={handleEngineStop}
             onRenderFramePost={onRenderFramePost}

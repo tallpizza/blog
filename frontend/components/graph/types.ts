@@ -23,7 +23,7 @@ export interface PendingLink {
 }
 
 export interface DragLink {
-  sourceNode: any;
+  sourceNode: ForceGraphNode;
   mouseX: number;
   mouseY: number;
 }

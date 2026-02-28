@@ -9,6 +9,10 @@ export interface ParsedLabel {
   sizeMultiplier: number;
 }
 
+function getEndpointId(endpoint: string | ForceGraphNode): string {
+  return typeof endpoint === 'string' ? endpoint : endpoint.id;
+}
+
 export function parseMarkdownLabel(label: string): ParsedLabel {
   let text = label;
   let fontWeight = 'normal';
@@ -41,8 +45,8 @@ export function parseMarkdownLabel(label: string): ParsedLabel {
 }
 
 interface UseGraphRenderingProps {
-  hoveredNode: any;
-  hoveredLink: any;
+  hoveredNode: ForceGraphNode | null;
+  hoveredLink: ForceGraphLink | null;
   selectedNode: Node | null;
   focusedNodeId: string | null;
   dragLink: DragLink | null;
@@ -73,16 +77,21 @@ export function useGraphRendering({
     
     const connected = new Set<string>([hoveredNode.id]);
     links.forEach(link => {
-      const sourceId = typeof link.source === 'string' ? link.source : (link.source as any).id;
-      const targetId = typeof link.target === 'string' ? link.target : (link.target as any).id;
+      const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
+      const targetId = typeof link.target === 'string' ? link.target : link.target.id;
       if (sourceId === hoveredNode.id) connected.add(targetId);
       if (targetId === hoveredNode.id) connected.add(sourceId);
     });
     return connected;
   }, [hoveredNode, links]);
 
-  const nodeCanvasObject = useCallback((node: any, ctx: CanvasRenderingContext2D, globalScale: number) => {
-    const parsed = parseMarkdownLabel(node.label);
+  const nodeCanvasObject = useCallback((rawNode: unknown, ctx: CanvasRenderingContext2D, globalScale: number) => {
+    const node = rawNode as ForceGraphNode;
+    const nodeX = node.x;
+    const nodeY = node.y;
+    if (nodeX === undefined || nodeY === undefined) return;
+
+    const parsed = parseMarkdownLabel(typeof node.label === 'string' ? node.label : '');
     const baseFontSize = 12 / globalScale;
     const fontSize = baseFontSize * parsed.sizeMultiplier;
     ctx.font = `${parsed.fontStyle} ${parsed.fontWeight} ${fontSize}px Sans-Serif`;
@@ -90,7 +99,6 @@ export function useGraphRendering({
     const ringInnerScaled = ringInner / globalScale;
     const ringOuterScaled = ringOuter / globalScale;
     
-    const isConnected = connectedNodeIds.has(node.id);
     const isHovered = hoveredNode?.id === node.id;
     const isDragSource = dragLink?.sourceNode?.id === node.id;
     const isDragTarget = dragTargetNode?.id === node.id;
@@ -101,39 +109,39 @@ export function useGraphRendering({
     
     if (isDragTarget) {
       ctx.beginPath();
-      ctx.arc(node.x, node.y, ringOuterScaled, 0, 2 * Math.PI);
-      ctx.arc(node.x, node.y, ringInnerScaled, 0, 2 * Math.PI, true);
+      ctx.arc(nodeX, nodeY, ringOuterScaled, 0, 2 * Math.PI);
+      ctx.arc(nodeX, nodeY, ringInnerScaled, 0, 2 * Math.PI, true);
       ctx.fillStyle = 'rgba(34, 197, 94, 0.7)';
       ctx.fill();
     }
     
     if (isFocused && !isHovered && !isDragSource && !isDragTarget) {
       ctx.beginPath();
-      ctx.arc(node.x, node.y, ringOuterScaled, 0, 2 * Math.PI);
-      ctx.arc(node.x, node.y, ringInnerScaled, 0, 2 * Math.PI, true);
+      ctx.arc(nodeX, nodeY, ringOuterScaled, 0, 2 * Math.PI);
+      ctx.arc(nodeX, nodeY, ringInnerScaled, 0, 2 * Math.PI, true);
       ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
       ctx.fill();
     }
     
     if (isHovered && !isDragSource && !isDragTarget) {
       ctx.beginPath();
-      ctx.arc(node.x, node.y, ringOuterScaled, 0, 2 * Math.PI);
-      ctx.arc(node.x, node.y, ringInnerScaled, 0, 2 * Math.PI, true);
+      ctx.arc(nodeX, nodeY, ringOuterScaled, 0, 2 * Math.PI);
+      ctx.arc(nodeX, nodeY, ringInnerScaled, 0, 2 * Math.PI, true);
       ctx.fillStyle = ringHovered ? 'rgba(34, 197, 94, 0.6)' : 'rgba(255, 255, 255, 0.3)';
       ctx.fill();
     }
     
     if (isDragSource) {
       ctx.beginPath();
-      ctx.arc(node.x, node.y, ringOuterScaled, 0, 2 * Math.PI);
+      ctx.arc(nodeX, nodeY, ringOuterScaled, 0, 2 * Math.PI);
       ctx.fillStyle = 'rgba(34, 197, 94, 0.4)';
       ctx.fill();
     }
     
     ctx.beginPath();
-    ctx.arc(node.x, node.y, nodeRadiusScaled, 0, 2 * Math.PI);
+    ctx.arc(nodeX, nodeY, nodeRadiusScaled, 0, 2 * Math.PI);
     
-    let fillColor = node.color;
+    let fillColor = typeof node.color === 'string' ? node.color : '#64748B';
     let nodeAlpha = 1;
     if (isDragSource) fillColor = '#22c55e';
     else if (isHovered || isSelected || isFocused) nodeAlpha = 0.6;
@@ -160,20 +168,25 @@ export function useGraphRendering({
     ctx.textBaseline = 'middle';
     ctx.globalAlpha = isDimmed ? 0.4 : 1;
     ctx.fillStyle = isDragSource ? '#000' : (isHovered || isSelected || isFocused) ? '#9ca3af' : '#fff';
-    ctx.fillText(parsed.text, node.x, node.y);
+    ctx.fillText(parsed.text, nodeX, nodeY);
     ctx.globalAlpha = 1;
   }, [connectedNodeIds, hoveredNode, dragLink, dragTargetNode, selectedNode, focusedNodeId, ringHovered, highlightedNodeIds, nodeRadius, ringInner, ringOuter]);
 
-  const nodeColor = useCallback((node: any) => {
+  const nodeColor = useCallback((rawNode: unknown) => {
+    const node = rawNode as ForceGraphNode;
     const isDragSource = dragLink?.sourceNode?.id === node.id;
     if (isDragSource) return '#22c55e';
-    return node.color;
+    return typeof node.color === 'string' ? node.color : '#64748B';
   }, [dragLink]);
 
   const onRenderFramePost = useCallback((ctx: CanvasRenderingContext2D, globalScale: number) => {
     if (!dragLink) return;
     
     const { sourceNode, mouseX, mouseY } = dragLink;
+    const sourceX = sourceNode.x;
+    const sourceY = sourceNode.y;
+    if (sourceX === undefined || sourceY === undefined) return;
+
     const endpointStyle = getDragEndpointStyle({
       hasDragTarget: Boolean(dragTargetNode),
       nodeRadius,
@@ -181,7 +194,7 @@ export function useGraphRendering({
     });
     
     ctx.beginPath();
-    ctx.moveTo(sourceNode.x, sourceNode.y);
+    ctx.moveTo(sourceX, sourceY);
     ctx.lineTo(mouseX, mouseY);
     ctx.strokeStyle = '#22c55e';
     ctx.lineWidth = 3 / globalScale;
@@ -201,10 +214,11 @@ export function useGraphRendering({
     }
   }, [dragLink, dragTargetNode, nodeRadius]);
 
-  const linkCanvasObject = useCallback((link: any, ctx: CanvasRenderingContext2D, globalScale: number) => {
-    const source = link.source as any;
-    const target = link.target as any;
-    if (!source.x || !target.x) return;
+  const linkCanvasObject = useCallback((rawLink: unknown, ctx: CanvasRenderingContext2D, globalScale: number) => {
+    const link = rawLink as ForceGraphLink;
+    const source = typeof link.source === 'string' ? null : link.source;
+    const target = typeof link.target === 'string' ? null : link.target;
+    if (!source || !target || source.x === undefined || source.y === undefined || target.x === undefined || target.y === undefined) return;
 
     const text = link.originalRel?.properties?.text;
     if (!text) return;
@@ -241,9 +255,12 @@ export function useGraphRendering({
     ctx.fillText(parsed.text, midX, midY);
   }, []);
 
-  const linkColor = useCallback((link: any) => {
-    const linkId = link.id || `${link.source?.id || link.source}-${link.target?.id || link.target}`;
-    const hoveredLinkId = hoveredLink?.id || (hoveredLink ? `${hoveredLink.source?.id || hoveredLink.source}-${hoveredLink.target?.id || hoveredLink.target}` : null);
+  const linkColor = useCallback((rawLink: unknown) => {
+    const link = rawLink as ForceGraphLink;
+    const linkId = link.id || `${getEndpointId(link.source)}-${getEndpointId(link.target)}`;
+    const hoveredLinkId = hoveredLink
+      ? hoveredLink.id || `${getEndpointId(hoveredLink.source)}-${getEndpointId(hoveredLink.target)}`
+      : null;
     const isHovered = linkId === hoveredLinkId;
     
     if (isHovered) {
@@ -259,9 +276,12 @@ export function useGraphRendering({
     return '#64748B';
   }, [connectedNodeIds, hoveredLink]);
 
-  const linkWidth = useCallback((link: any) => {
-    const linkId = link.id || `${link.source?.id || link.source}-${link.target?.id || link.target}`;
-    const hoveredLinkId = hoveredLink?.id || (hoveredLink ? `${hoveredLink.source?.id || hoveredLink.source}-${hoveredLink.target?.id || hoveredLink.target}` : null);
+  const linkWidth = useCallback((rawLink: unknown) => {
+    const link = rawLink as ForceGraphLink;
+    const linkId = link.id || `${getEndpointId(link.source)}-${getEndpointId(link.target)}`;
+    const hoveredLinkId = hoveredLink
+      ? hoveredLink.id || `${getEndpointId(hoveredLink.source)}-${getEndpointId(hoveredLink.target)}`
+      : null;
     const isHovered = linkId === hoveredLinkId;
     
     if (isHovered) {
@@ -277,11 +297,15 @@ export function useGraphRendering({
     return 1.5;
   }, [connectedNodeIds, hoveredLink]);
 
-  const nodePointerAreaPaint = useCallback((node: any, color: string, ctx: CanvasRenderingContext2D, globalScale: number) => {
+  const nodePointerAreaPaint = useCallback((rawNode: unknown, color: string, ctx: CanvasRenderingContext2D, globalScale: number) => {
+    const node = rawNode as ForceGraphNode;
+    const nodeX = node.x;
+    const nodeY = node.y;
+    if (nodeX === undefined || nodeY === undefined) return;
     // Extend hit area to include the ring (ringOuter = nodeRadius + 12)
     const scaledRadius = ringOuter / globalScale;
     ctx.beginPath();
-    ctx.arc(node.x, node.y, scaledRadius, 0, 2 * Math.PI);
+    ctx.arc(nodeX, nodeY, scaledRadius, 0, 2 * Math.PI);
     ctx.fillStyle = color;
     ctx.fill();
   }, [ringOuter]);
