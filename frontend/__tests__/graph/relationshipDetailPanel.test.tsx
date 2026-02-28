@@ -81,4 +81,58 @@ describe('RelationshipDetailPanel', () => {
 
     expect(onClose).toHaveBeenCalledTimes(1);
   });
+
+  it('asks confirmation before deleting relationship and deletes on confirm', () => {
+    const onDelete = vi.fn();
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+
+    render(
+      <RelationshipDetailPanel
+        relationship={{
+          id: 'rel-1',
+          type: 'RELATES_TO',
+          startNode: 'a',
+          endNode: 'b',
+          properties: { text: 'before' },
+        }}
+        onClose={vi.fn()}
+        onDelete={onDelete}
+        deleting={false}
+        isMobile
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'More options' }));
+    fireEvent.click(screen.getByTestId('delete-rel-btn'));
+
+    expect(confirmSpy).toHaveBeenCalledWith('Delete this relationship?');
+    expect(onDelete).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not delete relationship when confirmation is cancelled', () => {
+    const onDelete = vi.fn();
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false);
+
+    render(
+      <RelationshipDetailPanel
+        relationship={{
+          id: 'rel-1',
+          type: 'RELATES_TO',
+          startNode: 'a',
+          endNode: 'b',
+          properties: { text: 'before' },
+        }}
+        onClose={vi.fn()}
+        onDelete={onDelete}
+        deleting={false}
+        isMobile
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'More options' }));
+    fireEvent.click(screen.getByTestId('delete-rel-btn'));
+
+    expect(confirmSpy).toHaveBeenCalledWith('Delete this relationship?');
+    expect(onDelete).not.toHaveBeenCalled();
+  });
 });

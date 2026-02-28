@@ -174,6 +174,11 @@ export function useGraphRendering({
     if (!dragLink) return;
     
     const { sourceNode, mouseX, mouseY } = dragLink;
+    const endpointStyle = getDragEndpointStyle({
+      hasDragTarget: Boolean(dragTargetNode),
+      nodeRadius,
+      globalScale,
+    });
     
     ctx.beginPath();
     ctx.moveTo(sourceNode.x, sourceNode.y);
@@ -183,10 +188,18 @@ export function useGraphRendering({
     ctx.stroke();
     
     ctx.beginPath();
-    ctx.arc(mouseX, mouseY, 6 / globalScale, 0, 2 * Math.PI);
-    ctx.fillStyle = '#22c55e';
+    ctx.arc(mouseX, mouseY, endpointStyle.radius, 0, 2 * Math.PI);
+    ctx.fillStyle = endpointStyle.fillStyle;
     ctx.fill();
-  }, [dragLink]);
+
+    if (endpointStyle.strokeStyle && endpointStyle.lineWidth) {
+      ctx.beginPath();
+      ctx.arc(mouseX, mouseY, endpointStyle.radius, 0, 2 * Math.PI);
+      ctx.strokeStyle = endpointStyle.strokeStyle;
+      ctx.lineWidth = endpointStyle.lineWidth;
+      ctx.stroke();
+    }
+  }, [dragLink, dragTargetNode, nodeRadius]);
 
   const linkCanvasObject = useCallback((link: any, ctx: CanvasRenderingContext2D, globalScale: number) => {
     const source = link.source as any;
@@ -281,5 +294,40 @@ export function useGraphRendering({
     linkWidth,
     linkCanvasObject,
     nodePointerAreaPaint,
+  };
+}
+
+interface DragEndpointStyleParams {
+  hasDragTarget: boolean;
+  nodeRadius: number;
+  globalScale: number;
+}
+
+interface DragEndpointStyle {
+  radius: number;
+  fillStyle: string;
+  strokeStyle: string | null;
+  lineWidth: number | null;
+}
+
+export function getDragEndpointStyle({
+  hasDragTarget,
+  nodeRadius,
+  globalScale,
+}: DragEndpointStyleParams): DragEndpointStyle {
+  if (hasDragTarget) {
+    return {
+      radius: 6 / globalScale,
+      fillStyle: '#22c55e',
+      strokeStyle: null,
+      lineWidth: null,
+    };
+  }
+
+  return {
+    radius: nodeRadius / globalScale,
+    fillStyle: 'rgba(34, 197, 94, 0.22)',
+    strokeStyle: '#22c55e',
+    lineWidth: 2 / globalScale,
   };
 }

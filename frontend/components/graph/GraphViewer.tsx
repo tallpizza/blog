@@ -74,6 +74,7 @@ export default function GraphViewer() {
   }, [fetchGraphData]);
 
   const forceGraphDataRef = useRef<ForceGraphData>({ nodes: [], links: [] });
+  const pendingNodePositionRef = useRef<Map<string, { x: number; y: number }>>(new Map());
   const prevNodeCountRef = useRef(0);
   const prevRelCountRef = useRef(0);
 
@@ -133,7 +134,14 @@ export default function GraphViewer() {
         labels: node.labels,
         color: getColor(node.labels[0]),
         originalNode: node,
+        ...(pendingNodePositionRef.current.get(nodeId) ?? {}),
       };
+    });
+
+    nodes.forEach((node) => {
+      if (pendingNodePositionRef.current.has(node.id)) {
+        pendingNodePositionRef.current.delete(node.id);
+      }
     });
 
     const links = graphData.relationships.map((rel, idx) => ({
@@ -238,12 +246,45 @@ export default function GraphViewer() {
     }
   }, [pushCommand]);
 
+  const handleCreateLinkedNodeAtPosition = useCallback(async ({
+    fromNodeId,
+    x,
+    y,
+  }: {
+    fromNodeId: string;
+    x: number;
+    y: number;
+  }) => {
+    try {
+      const createdNode = await api.createNode({ text: '' });
+      const newNode = createdNode as Node;
+
+      pendingNodePositionRef.current.set(newNode.id, { x, y });
+
+      setGraphData((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          nodes: [...prev.nodes, newNode],
+        };
+      });
+
+      await handleInstantLinkCreate({
+        fromNodeId,
+        toNodeId: newNode.id,
+      });
+    } catch (err) {
+      console.error('Error creating linked node:', err);
+    }
+  }, [handleInstantLinkCreate]);
+
   const { dragLink, dragTargetNode, ringHovered, clearDragLink } = useRingLinkCreation({
     containerRef,
     fgRef,
     nodes: forceGraphData.nodes,
     is3D,
     onPendingLink: handleInstantLinkCreate,
+    onPendingLinkToNewNode: handleCreateLinkedNodeAtPosition,
     nodeRadius: graphSettings.nodeRadius,
   });
 

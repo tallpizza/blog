@@ -181,6 +181,11 @@ export function RelationshipDetailPanel({
     });
   };
 
+  const handleDeleteRelationship = useCallback(() => {
+    if (!confirm('Delete this relationship?')) return;
+    onDelete();
+  }, [onDelete]);
+
   const content = (
     <div className="space-y-4">
       <div>
@@ -283,7 +288,7 @@ export function RelationshipDetailPanel({
               <div className="pt-2">
                 <button
                   data-testid="delete-rel-btn"
-                  onClick={onDelete}
+                  onClick={handleDeleteRelationship}
                   disabled={deleting}
                   className="flex items-center gap-2 px-3 py-1.5 text-red-400 hover:text-red-300 hover:bg-red-900/30 rounded text-sm transition-colors"
                 >

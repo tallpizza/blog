@@ -8,6 +8,11 @@ interface UseRingLinkCreationProps {
   nodes: ForceGraphNode[];
   is3D: boolean;
   onPendingLink: (link: PendingLink) => void;
+  onPendingLinkToNewNode?: (payload: {
+    fromNodeId: string;
+    x: number;
+    y: number;
+  }) => void;
   nodeRadius?: number;
 }
 
@@ -25,16 +30,23 @@ export function useRingLinkCreation({
   nodes,
   is3D,
   onPendingLink,
+  onPendingLinkToNewNode,
   nodeRadius: nodeRadiusProp,
 }: UseRingLinkCreationProps): UseRingLinkCreationReturn {
   const [dragLink, setDragLink] = useState<DragLink | null>(null);
   const [dragTargetNode, setDragTargetNode] = useState<ForceGraphNode | null>(null);
   const [ringHovered, setRingHovered] = useState(false);
   const isDraggingLinkRef = useRef(false);
-  
+  const dragSourceNodeIdRef = useRef<string | null>(null);
+
   const nodeRadius = nodeRadiusProp ?? NODE_RADIUS;
   const ringInner = nodeRadius + 4;
   const ringOuter = nodeRadius + 12;
+
+  const resolveDropAction = (
+    sourceNodeId: string,
+    foundNodeId: string | null
+  ) => resolveRingDropAction({ sourceNodeId, foundNodeId });
 
   useEffect(() => {
     if (is3D) return;
@@ -110,6 +122,7 @@ export function useRingLinkCreation({
           e.stopPropagation();
           e.preventDefault();
           isDraggingLinkRef.current = true;
+          dragSourceNodeIdRef.current = node.id;
           const { x: graphX, y: graphY } = getGraphCoords(clientX, clientY);
           setDragLink({
             sourceNode: node,
@@ -137,23 +150,31 @@ export function useRingLinkCreation({
     const handlePointerUp = (clientX: number, clientY: number) => {
       if (!isDraggingLinkRef.current || !fgRef.current) {
         isDraggingLinkRef.current = false;
+        dragSourceNodeIdRef.current = null;
         return;
       }
       
       const { x: graphX, y: graphY } = getGraphCoords(clientX, clientY);
       const found = findNodeAt(graphX, graphY);
+      const sourceNodeId = dragSourceNodeIdRef.current;
       
-      setDragLink(prev => {
-        if (prev && found && found.node.id !== prev.sourceNode.id) {
-          onPendingLink({
-            fromNodeId: prev.sourceNode.id,
-            toNodeId: found.node.id,
-          });
-        }
-        return null;
-      });
+      setDragLink(null);
+
+      if (sourceNodeId) {
+        applyRingDropAction({
+          sourceNodeId,
+          foundNodeId: found ? found.node.id : null,
+          graphX,
+          graphY,
+          onPendingLink,
+          onPendingLinkToNewNode,
+          resolveDropAction,
+        });
+      }
+
       setDragTargetNode(null);
       isDraggingLinkRef.current = false;
+      dragSourceNodeIdRef.current = null;
     };
 
     const handleMouseDown = (e: MouseEvent) => handlePointerDown(e.clientX, e.clientY, e);
@@ -182,6 +203,7 @@ export function useRingLinkCreation({
 
     const handleTouchCancel = () => {
       isDraggingLinkRef.current = false;
+      dragSourceNodeIdRef.current = null;
       setDragLink(null);
       setDragTargetNode(null);
     };
@@ -250,12 +272,13 @@ export function useRingLinkCreation({
       container.removeEventListener('touchend', handleTouchEnd, true);
       container.removeEventListener('touchcancel', handleTouchCancel, true);
     };
-  }, [is3D, nodes, containerRef, fgRef, onPendingLink, nodeRadius, ringInner, ringOuter]);
+  }, [is3D, nodes, containerRef, fgRef, onPendingLink, onPendingLinkToNewNode, nodeRadius, ringInner, ringOuter]);
 
   const clearDragLink = () => {
     setDragLink(null);
     setDragTargetNode(null);
     isDraggingLinkRef.current = false;
+    dragSourceNodeIdRef.current = null;
   };
 
   return {
@@ -265,4 +288,71 @@ export function useRingLinkCreation({
     isDraggingLinkRef,
     clearDragLink,
   };
+}
+
+interface ResolveRingDropActionParams {
+  sourceNodeId: string;
+  foundNodeId: string | null;
+}
+
+type RingDropAction =
+  | { type: 'link'; toNodeId: string }
+  | { type: 'create-node' }
+  | { type: 'none' };
+
+export function resolveRingDropAction({
+  sourceNodeId,
+  foundNodeId,
+}: ResolveRingDropActionParams): RingDropAction {
+  if (!foundNodeId) {
+    return { type: 'create-node' };
+  }
+
+  if (foundNodeId === sourceNodeId) {
+    return { type: 'none' };
+  }
+
+  return { type: 'link', toNodeId: foundNodeId };
+}
+
+interface ApplyRingDropActionParams {
+  sourceNodeId: string;
+  foundNodeId: string | null;
+  graphX: number;
+  graphY: number;
+  onPendingLink: (link: PendingLink) => void;
+  onPendingLinkToNewNode?: (payload: {
+    fromNodeId: string;
+    x: number;
+    y: number;
+  }) => void;
+  resolveDropAction?: (sourceNodeId: string, foundNodeId: string | null) => RingDropAction;
+}
+
+export function applyRingDropAction({
+  sourceNodeId,
+  foundNodeId,
+  graphX,
+  graphY,
+  onPendingLink,
+  onPendingLinkToNewNode,
+  resolveDropAction = (sourceId, foundId) => resolveRingDropAction({ sourceNodeId: sourceId, foundNodeId: foundId }),
+}: ApplyRingDropActionParams): void {
+  const action = resolveDropAction(sourceNodeId, foundNodeId);
+
+  if (action.type === 'link') {
+    onPendingLink({
+      fromNodeId: sourceNodeId,
+      toNodeId: action.toNodeId,
+    });
+    return;
+  }
+
+  if (action.type === 'create-node' && onPendingLinkToNewNode) {
+    onPendingLinkToNewNode({
+      fromNodeId: sourceNodeId,
+      x: graphX,
+      y: graphY,
+    });
+  }
 }
